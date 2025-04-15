@@ -1,0 +1,11 @@
+numpy
+opencv-python
+urllib3
+pyautogui
+pynput
+tk
+qrcode
+pyzbar
+scikit-learn
+pillow
+matplotlib
