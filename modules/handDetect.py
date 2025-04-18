@@ -2,9 +2,11 @@ import cv2
 import mediapipe as mp
 import time
 
+
 class DetectHander():
     size_circle = 10
     color_circle = (255, 0, 255)
+
     def __init__(self, list_id_hands):
         mpHands = mp.solutions.hands
         self.mpHands = mpHands
@@ -45,7 +47,8 @@ class DetectHander():
         if results.multi_hand_landmarks:
             for handLms in results.multi_hand_landmarks:
                 # corrected reference to HAND_CONNECTIONS
-                self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
+                self.mpDraw.draw_landmarks(
+                    img, handLms, self.mpHands.HAND_CONNECTIONS)
         return img
 
     def draw_circle_hands(self, img, results=None):
@@ -54,5 +57,6 @@ class DetectHander():
         # reuse helper for circle drawing
         for id, cx, cy in self._extract_landmarks(img, results):
             if id in self.list_id_hands:
-                cv2.circle(img, (cx, cy), self.size_circle, self.color_circle, cv2.FILLED)
+                cv2.circle(img, (cx, cy), self.size_circle,
+                           self.color_circle, cv2.FILLED)
         return img

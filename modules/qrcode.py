@@ -1,9 +1,11 @@
 import qrcode
 import numpy as np
 
+
 class QRCodeB:
     _qr = None
-    def __init__(self, version = 1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=5, border=2):
+
+    def __init__(self, version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=5, border=2):
         """__init__ object qr function for bincase project
 
         Args:
@@ -19,6 +21,7 @@ class QRCodeB:
             box_size=box_size,
             border=border,
         )
+
     def make(self, text, fill_color="black", back_color="white"):
         """Create a QR code
 
@@ -35,9 +38,11 @@ class QRCodeB:
         self._qr.add_data(text)
         self._qr.make(fit=True)
 
-        pil_img = self._qr.make_image(fill_color=fill_color, back_color=back_color).convert("L")
+        pil_img = self._qr.make_image(
+            fill_color=fill_color, back_color=back_color).convert("L")
         return np.asarray(pil_img, dtype=np.uint8)
-    def add_corners_qr(self, img, core_text = "bin"):
+
+    def add_corners_qr(self, img, core_text="bin"):
         """Add 4 qr code to corners of given image
 
         Args:
@@ -47,13 +52,16 @@ class QRCodeB:
         Returns:
             numpy.array: Image with 4 qrcode in corners
         """
-        img_tl, img_tr, img_bl, img_br = self.make(core_text + '-tl'), self.make(core_text + '-tr'), self.make(core_text + '-bl'), self.make(core_text + '-br')
+        img_tl, img_tr, img_bl, img_br = self.make(core_text + '-tl'), self.make(
+            core_text + '-tr'), self.make(core_text + '-bl'), self.make(core_text + '-br')
         img[:img_tl.shape[0], :img_tl.shape[1]] = img_tl
         img[:img_tl.shape[0], img.shape[1] - img_tl.shape[1]:] = img_tr
         img[img.shape[0] - img_tl.shape[0]:, :img_tl.shape[1]] = img_bl
-        img[img.shape[0] - img_tl.shape[0]:, img.shape[1] - img_tl.shape[1]:] = img_br
+        img[img.shape[0] - img_tl.shape[0]:,
+            img.shape[1] - img_tl.shape[1]:] = img_br
         return img
-    def given_image_corners_qr(self, size, core_text = "bin"):
+
+    def given_image_corners_qr(self, size, core_text="bin"):
         """Create a white backgroud image and add 4 qrcode to corners
 
         Args:

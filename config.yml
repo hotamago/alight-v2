@@ -3,7 +3,7 @@ num_image_cal: 15
 size_chess: 12
 corner_chess_size: [10, 10]
 qr_version: 1
-qr_box_size: 12
+qr_box_size: 18
 qr_border: 2
 radius_c_chess: 45
 minDist: 60
@@ -14,14 +14,14 @@ maxRadius: 50
 camera1_id: 0
 camera2_id: 1
 on_cam1: true
-on_cam2: true
+on_cam2: false
 on_cam1Hsv: false
 on_cam2Hsv: false
 on_cam1Ycbcr: false
 on_cam2Ycbcr: false
 on_cam1FTI: false
 on_cam2FTI: false
-on_config: false
+on_config: True
 on_show_cam1: false
 on_show_cam2: false
 on_controller: false
@@ -70,7 +70,8 @@ maxRadiusFigueContour: 10
 color_nonClicked: [0, 255, 0]
 color_clicked: [0, 0, 255]
 show_FPS_console: false
-size_window: [640, 480]
+# size_window: [640, 480]
+size_window: [1024, 768]
 fullscreensize: [1920, 1080]
 set_detect_value_qr: ["tl", "tr", "bl", "br"]
 core_value_qr: "bincase-core"
