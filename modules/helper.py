@@ -6,6 +6,7 @@ from config import cfg
 from modules.qrcode import QRCodeB
 from modules.imageProcess import ImageProcessor
 from modules.math import MatrixBincase
+from modules.detectCornerScreen import detect_corners
 import cv2
 import numpy as np
 import math
@@ -175,6 +176,10 @@ def auto_ProcessImage(imgCam, maCamYXZ, gamma, fillCam_01, noseCam, on_show_cam,
 
 # Auto detect corners
 imgQRcorners = qr.given_image_corners_qr(fullscreensize, core_value_qr)
+imgQRcorners_qr_big = qr.create_image_big_qr_center(
+        size=fullscreensize, radio_screen_size=cfg["qr_radio_screen_size"], core_text=core_value_qr
+    )
+imgQRcorners_whiteonly = qr.create_fullscreen_white_image(size=fullscreensize)
 
 
 def setFullScreenCV(nameWindow):
@@ -190,6 +195,20 @@ def showQRcorners():
     setFullScreenCV("imgQRcorners")
     cv2.imshow("imgQRcorners", imgQRcorners)
 
+
+def showOneBigQRcorners():
+    """
+    Show QR code corners
+    """
+    setFullScreenCV("imgQRcorners")
+    cv2.imshow("imgQRcorners", imgQRcorners_qr_big)
+
+def showWhiteScreen():
+    """
+    Show white screen
+    """
+    setFullScreenCV("imgQRcorners")
+    cv2.imshow("imgQRcorners", imgQRcorners_whiteonly)
 
 def destroyQRcorners():
     cv2.destroyWindow("imgQRcorners")
@@ -235,6 +254,47 @@ def get4Corners(imgCam, lambda_format_ma, delta_point=(0, 0)):
         maCamYXZ = lambda_format_ma(maCam)
     return is_detect_corners, maCam, maCamYXZ
 
+def get4CornersSimple(imgCam, lambda_format_ma, delta_point=(0, 0)):
+    maCam = ((0, 0), (0, 0), (0, 0), (0, 0))
+    maCamYXZ = ((0, 0), (0, 0), (0, 0), (0, 0))
+    isDetectQR = False
+    points4 = None
+    # Detect QR code on center of screen
+    grey = cv2.cvtColor(imgCam, cv2.COLOR_BGR2GRAY)
+    values = decode_qr(grey, symbols=[ZBarSymbol.QRCODE])
+    if len(values) > 0:
+        for value in values:
+            qr_value = value.data.decode()
+            points4 = [(p.x, p.y) for p in value.polygon]
+            if qr_value == core_value_qr:
+                isDetectQR = True
+                break
+    
+    if not isDetectQR:
+        return False, maCam, maCamYXZ
+    
+    # fill qr code to white base on 4 points
+    imgCam_temp = imgCam.copy()
+    cv2.fillConvexPoly(imgCam_temp, np.array(points4, dtype=np.int32), (255, 255, 255))
+    
+    # Detect corners of screen
+    corners = detect_corners(imgCam_temp, lower_bound=points4)
+
+    if corners is not None:
+        rect = corners.astype(np.float32)
+        dx, dy = delta_point
+        offset = np.array([
+            [-dx, -dy],   # top-left shift
+            [ dx, -dy],   # top-right
+            [ dx,  dy],   # bottom-right
+            [-dx,  dy],   # bottom-left
+        ], dtype=np.float32)
+        rect += offset
+        maCam = tuple(map(tuple, rect))
+        maCamYXZ = lambda_format_ma(maCam)
+        return True, maCam, maCamYXZ
+    
+    return False, maCam, maCamYXZ
 
 def get4Corners_chess(imgCam, size_chess, lambda_format_ma, delta_point=(25, 30)):
     global imgQRcorners

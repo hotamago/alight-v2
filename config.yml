@@ -5,31 +5,32 @@ corner_chess_size: [10, 10]
 qr_version: 1
 qr_box_size: 18
 qr_border: 2
+qr_radio_screen_size: 0.8
 radius_c_chess: 45
 minDist: 60
 param1: 160
 param2: 20
 minRadius: 10
 maxRadius: 50
-camera1_id: 0
-camera2_id: 1
+camera1_id: 1
+camera2_id: 0
 on_cam1: true
-on_cam2: false
-on_cam1Hsv: false
-on_cam2Hsv: false
+on_cam2: true
+on_cam1Hsv: true
+on_cam2Hsv: true
 on_cam1Ycbcr: false
 on_cam2Ycbcr: false
 on_cam1FTI: false
 on_cam2FTI: false
-on_config: True
-on_show_cam1: false
-on_show_cam2: false
+on_config: true
+on_show_cam1: true
+on_show_cam2: true
 on_controller: false
-on_black_points_touch_screen: false
+on_black_points_touch_screen: true
 on_paint_test: true
 on_debug: true
 gamma1: 0.6
-gamma2: 0.8
+gamma2: 0.5
 noseCam1: [3, 3]
 noseCam2: [3, 3]
 fillCam1_01:
@@ -42,10 +43,16 @@ is_cam1_flip: false
 is_cam2_flip: false
 cam1_flip_mode: -1
 cam2_flip_mode: -1
-cam1_exposure: -1.0
+cam1_exposure: -8.5
 cam1_exposure_auto: 3
-cam2_exposure: -6.0
+cam2_exposure: -8.5
 cam2_exposure_auto: 3
+cam1_brightness: 0.0
+cam2_brightness: 130.0
+cam1_contrast: 155.0
+cam2_contrast: 190.0
+cam1_saturation: 128.0
+cam2_saturation: 128.0
 urlcam1: "http://192.168.137.155:8080/shot.jpg"
 urlcam2: "http://192.168.137.182:8080/shot.jpg"
 fps_cam1: 15
@@ -71,7 +78,7 @@ color_nonClicked: [0, 255, 0]
 color_clicked: [0, 0, 255]
 show_FPS_console: false
 # size_window: [640, 480]
-size_window: [1024, 768]
+size_window: [1280, 720]
 fullscreensize: [1920, 1080]
 set_detect_value_qr: ["tl", "tr", "bl", "br"]
 core_value_qr: "bincase-core"

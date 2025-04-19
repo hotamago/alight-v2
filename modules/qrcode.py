@@ -1,6 +1,6 @@
 import qrcode
 import numpy as np
-
+import cv2
 
 class QRCodeB:
     _qr = None
@@ -73,4 +73,41 @@ class QRCodeB:
         """
         img = np.full((size[1], size[0]), 255, dtype=np.uint8)
         img = self.add_corners_qr(img, core_text)
+        return img
+
+    def create_image_big_qr_center(self, size, radio_screen_size, core_text="bin"):
+        """Create a white backgroud image and add 1 qrcode to center
+
+        Args:
+            size (tuple): size of image
+            core_text (str, optional): Vertify data text corners. Defaults to "bin".
+
+        Returns:
+            numpy.array: Image with 1 qrcode in center and white backgroud
+        """
+        img = np.full((size[1], size[0]), 255, dtype=np.uint8)
+        img_qr = self.make(core_text)
+        # QR Code size is radio_screen_size of the image size
+        qr_size = int(min(size) * radio_screen_size)
+        # Calculate the position to center the QR code
+        x_offset = (size[0] - qr_size) // 2
+        y_offset = (size[1] - qr_size) // 2
+        # Resize the QR code to the desired size
+        img_qr = cv2.resize(img_qr, (qr_size, qr_size))
+        # Place the QR code in the center of the image
+        img[y_offset:y_offset + qr_size,
+            x_offset:x_offset + qr_size] = img_qr
+  
+        return img
+    
+    def create_fullscreen_white_image(self, size):
+        """Create a white backgroud image
+
+        Args:
+            size (tuple): size of image
+
+        Returns:
+            numpy.array: Image with white backgroud
+        """
+        img = np.full((size[1], size[0]), 255, dtype=np.uint8)
         return img

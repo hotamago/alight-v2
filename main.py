@@ -1,9 +1,7 @@
 """
 Open library
 """
-from modules.helper import (onMouse, showQRcorners, destroyQRcorners, get4Corners,
-                            auto_ProcessImage, auto_ProcessImage_onlyfti,
-                            auto_ProcessImage_onlyhand, setFullScreenCV)
+from modules.helper import *
 import modules.smoothFun as smoothB
 from constant import *
 from config import cfg
@@ -34,10 +32,9 @@ Init object
 mouse = Controller()
 
 matrixBincase = MatrixBincase()
-imageProcesser = ImageProcessor()
-detectQR = cv2.QRCodeDetector()
-qr = QRCodeB(version=cfg['qr_version'],
-             box_size=cfg['qr_box_size'], border=cfg['qr_border'])
+# imageProcesser = ImageProcessor()
+# detectQR = cv2.QRCodeDetector()
+# qr = QRCodeB(version=cfg['qr_version'], box_size=cfg['qr_box_size'], border=cfg['qr_border'])
 stereo = cv2.StereoBM_create(
     numDisparities=cfg['numDisparitiesDepth'], blockSize=cfg['blockSizeDepth'])
 
@@ -52,106 +49,6 @@ if cfg['on_cam2']:
                          cfg['cam2_exposure'], cfg['cam2_exposure_auto'], cfg['fps_cam2'])
 
 """
-Configuration UI Setup
-"""
-config_window_name = "Configuration"
-cv2.namedWindow(config_window_name)
-
-# --- Trackbar Callback Functions ---
-
-
-def update_gamma1(val):
-    cfg['gamma1'] = val / 100.0
-
-
-def update_gamma2(val):
-    cfg['gamma2'] = val / 100.0
-
-
-def update_noseCam1_0(val):
-    if val % 2 == 0:
-        val += 1
-    if val < 3:
-        val = 3
-    cfg['noseCam1'][0] = val
-
-
-def update_noseCam1_1(val):
-    if val % 2 == 0:
-        val += 1
-    if val < 3:
-        val = 3
-    cfg['noseCam1'][1] = val
-
-
-def update_noseCam2_0(val):
-    if val % 2 == 0:
-        val += 1
-    if val < 3:
-        val = 3
-    cfg['noseCam2'][0] = val
-
-
-def update_noseCam2_1(val):
-    if val % 2 == 0:
-        val += 1
-    if val < 3:
-        val = 3
-    cfg['noseCam2'][1] = val
-
-
-def update_deltaContoursClicked(val):
-    cfg['deltaContoursClicked'] = val
-
-
-def update_maxRadiusFigueWithFigueShallow(val):
-    cfg['maxRadiusFigueWithFigueShallow'] = val
-
-
-def update_delta_Point_X(val):
-    cfg['delta_Point'][0] = val - 50
-
-
-def update_delta_Point_Y(val):
-    cfg['delta_Point'][1] = val - 50
-
-
-# --- Create Trackbars ---
-cv2.createTrackbar('Gamma 1 (x100)', config_window_name,
-                   int(cfg['gamma1'] * 100), 255, update_gamma1)
-cv2.createTrackbar('Gamma 2 (x100)', config_window_name,
-                   int(cfg['gamma2'] * 100), 255, update_gamma2)
-cv2.createTrackbar('Noise Cam1 K1', config_window_name,
-                   cfg['noseCam1'][0], 21, update_noseCam1_0)
-cv2.createTrackbar('Noise Cam1 K2', config_window_name,
-                   cfg['noseCam1'][1], 21, update_noseCam1_1)
-cv2.createTrackbar('Noise Cam2 K1', config_window_name,
-                   cfg['noseCam2'][0], 21, update_noseCam2_0)
-cv2.createTrackbar('Noise Cam2 K2', config_window_name,
-                   cfg['noseCam2'][1], 21, update_noseCam2_1)
-cv2.createTrackbar('Click Threshold', config_window_name,
-                   cfg['deltaContoursClicked'], 100, update_deltaContoursClicked)
-cv2.createTrackbar('Click Radius', config_window_name,
-                   cfg['maxRadiusFigueWithFigueShallow'], 50, update_maxRadiusFigueWithFigueShallow)
-cv2.createTrackbar('Delta Point X', config_window_name,
-                   cfg['delta_Point'][0] + 50, 100, update_delta_Point_X)
-cv2.createTrackbar('Delta Point Y', config_window_name,
-                   cfg['delta_Point'][1] + 50, 100, update_delta_Point_Y)
-
-# --- Function to Save Config ---
-
-
-def save_config():
-    config_path = os.path.join(os.path.dirname(__file__), 'config.yml')
-    try:
-        with open(config_path, 'w') as f:
-            yaml.dump(cfg, f, default_flow_style=False)
-        print(f"Configuration saved to {config_path}")
-    except Exception as e:
-        print(f"Error saving configuration: {e}")
-
-
-"""
 Function main process
 """
 
@@ -159,6 +56,33 @@ Function main process
 def main_process():
     size_window = tuple(cfg['size_window'])
     fullscreensize = tuple(cfg['fullscreensize'])
+
+    # --- realtime camera config UI ---
+    cv2.namedWindow("Camera Config", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Camera Config", 600, 150)
+    cv2.imshow("Camera Config", np.zeros((150, 600), dtype=np.uint8))
+    if cfg['on_cam1']:
+        cv2.createTrackbar("Exp1",        "Camera Config", int(
+            (cfg['cam1_exposure'] + 10) * 10), 200, lambda v: None)
+        cv2.createTrackbar("AutoExp1",    "Camera Config", int(
+            cfg['cam1_exposure_auto']), 3, lambda v: None)
+        cv2.createTrackbar("Brightness1", "Camera Config", int(
+            cfg.get('cam1_brightness', 128)), 255, lambda v: None)
+        cv2.createTrackbar("Contrast1",   "Camera Config", int(
+            cfg.get('cam1_contrast', 128)),  255, lambda v: None)
+        cv2.createTrackbar("Saturation1", "Camera Config", int(
+            cfg.get('cam1_saturation', 128)), 255, lambda v: None)
+    if cfg['on_cam2']:
+        cv2.createTrackbar("Exp2",        "Camera Config", int(
+            (cfg['cam2_exposure'] + 10) * 10), 200, lambda v: None)
+        cv2.createTrackbar("AutoExp2",    "Camera Config", int(
+            cfg['cam2_exposure_auto']), 3, lambda v: None)
+        cv2.createTrackbar("Brightness2", "Camera Config", int(
+            cfg.get('cam2_brightness', 128)), 255, lambda v: None)
+        cv2.createTrackbar("Contrast2",   "Camera Config", int(
+            cfg.get('cam2_contrast', 128)),  255, lambda v: None)
+        cv2.createTrackbar("Saturation2", "Camera Config", int(
+            cfg.get('cam2_saturation', 128)), 255, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
@@ -172,9 +96,9 @@ def main_process():
     maCam2YXZ = (maCam2[0], maCam2[2], maCam2[1], maCam2[3])
 
     is_detect_corners = False
+    step_detect_corners = 0
 
     mousePos = smoothB.average_vecN_smooth(cfg['numAverageMouseMove'])
-
     valueCntNear = [smoothB.average_smooth(
         cfg['numEleArgvan'])] * cfg['n_points_touch']
 
@@ -192,15 +116,49 @@ def main_process():
             counterFrame = 0
             start_time = time.time()
 
+        # apply realtime camera config settings
+        if cfg['on_cam1'] and camera1:
+            raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
+            e1 = raw_e1 / 10.0 - 10.0
+            ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
+            camera1.setExposure(e1, ae1)
+            # pull brightness/contrast/saturation into cfg, then apply
+            raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
+            cfg['cam1_brightness'] = raw_b1
+            camera1.setBrightness(raw_b1)
+            raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
+            cfg['cam1_contrast'] = raw_c1
+            camera1.setContrast(raw_c1)
+            raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
+            cfg['cam1_saturation'] = raw_s1
+            camera1.setSaturation(raw_s1)
+        if cfg['on_cam2'] and camera2:
+            raw_e2 = cv2.getTrackbarPos("Exp2",        "Camera Config")
+            e2 = raw_e2 / 10.0 - 10.0
+            ae2 = cv2.getTrackbarPos("AutoExp2",    "Camera Config")
+            camera2.setExposure(e2, ae2)
+            # pull brightness/contrast/saturation into cfg, then apply
+            raw_b2 = cv2.getTrackbarPos("Brightness2", "Camera Config")
+            cfg['cam2_brightness'] = raw_b2
+            camera2.setBrightness(raw_b2)
+            raw_c2 = cv2.getTrackbarPos("Contrast2", "Camera Config")
+            cfg['cam2_contrast'] = raw_c2
+            camera2.setContrast(raw_c2)
+            raw_s2 = cv2.getTrackbarPos("Saturation2", "Camera Config")
+            cfg['cam2_saturation'] = raw_s2
+            camera2.setSaturation(raw_s2)
+
         q = cv2.waitKey(1)
+        if q == ord('r'):
+            is_detect_corners = False   # reset to re-detect corners
+            step_detect_corners = 0
+            print("Reset corners detection.")
         if q == ord('q') or (cfg['on_cam1'] and camera1 and camera1.stopped) or (cfg['on_cam2'] and camera2 and camera2.stopped):
             if cfg['on_cam1'] and camera1:
                 camera1.stop()
             if cfg['on_cam2'] and camera2:
                 camera2.stop()
             break
-        elif q == ord('s'):
-            save_config()
 
         curFPP += 1
         if curFPP < FPP:
@@ -230,16 +188,24 @@ def main_process():
                 cv2.imshow("Camera test 2", imgCam2)
                 cv2.setMouseCallback(
                     "Camera test 2", onMouse, param=(imgCam2, cfg['gamma2']))
-            continue
+        #   continue
 
         if not is_detect_corners:
-            showQRcorners()
+            # showQRcorners()
+            showOneBigQRcorners()
             is_detect_corners_1, is_detect_corners_2 = False, False
+            # if cfg['on_cam1'] and imgCam1 is not None:
+            #     is_detect_corners_1, maCam1, maCam1YXZ = get4Corners(imgCam1, lambda x: (
+            #         x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
+            # if cfg['on_cam2'] and imgCam2 is not None:
+            #     is_detect_corners_2, maCam2, maCam2YXZ = get4Corners(imgCam2, lambda x: (
+            #         x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
+
             if cfg['on_cam1'] and imgCam1 is not None:
-                is_detect_corners_1, maCam1, maCam1YXZ = get4Corners(imgCam1, lambda x: (
+                is_detect_corners_1, maCam1, maCam1YXZ = get4CornersSimple(imgCam1, lambda x: (
                     x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
             if cfg['on_cam2'] and imgCam2 is not None:
-                is_detect_corners_2, maCam2, maCam2YXZ = get4Corners(imgCam2, lambda x: (
+                is_detect_corners_2, maCam2, maCam2YXZ = get4CornersSimple(imgCam2, lambda x: (
                     x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
 
             if (is_detect_corners_1 or not cfg['on_cam1']) and (is_detect_corners_2 or not cfg['on_cam2']):
@@ -266,66 +232,86 @@ def main_process():
                     cv2.setMouseCallback(
                         "Camera test 2", onMouse, param=(imgCam2, cfg['gamma2']))
 
-                continue
+                # continue
 
             contoursFigue_cam1 = []
-            if cfg['on_cam1'] and imgCam1 is not None:
-                contoursFigue_cam1 = auto_ProcessImage(imgCam1, maCam1YXZ, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'], cfg[
-                                                       'on_show_cam1'], cfg['on_cam1Hsv'], cfg['on_cam1Ycbcr'], cfg['on_cam1FTI'], "Camera test 1")
+            if cfg['on_cam1']:
+                contoursFigue_cam1 = auto_ProcessImage(
+                    imgCam1,
+                    maCam1YXZ,
+                    cfg['gamma1'],
+                    cfg['fillCam1_01'],
+                    cfg['noseCam1'],
+                    cfg['on_show_cam1'],
+                    cfg['on_cam1Hsv'],
+                    cfg['on_cam1Ycbcr'],
+                    cfg['on_cam1FTI'],
+                    "Camera test 1"
+                )
 
             contoursFigue_cam2 = []
-            if cfg['on_cam2'] and imgCam2 is not None:
-                contoursFigue_cam2 = auto_ProcessImage(imgCam2, maCam2YXZ, cfg['gamma2'], cfg['fillCam2_01'], cfg['noseCam2'], cfg[
-                                                       'on_show_cam2'], cfg['on_cam2Hsv'], cfg['on_cam2Ycbcr'], cfg['on_cam2FTI'], "Camera test 2")
+            if cfg['on_cam2']:
+                contoursFigue_cam2 = auto_ProcessImage(
+                    imgCam2,
+                    maCam2YXZ,
+                    cfg['gamma2'],
+                    cfg['fillCam2_01'],
+                    cfg['noseCam2'],
+                    cfg['on_show_cam2'],
+                    cfg['on_cam2Hsv'],
+                    cfg['on_cam2Ycbcr'],
+                    cfg['on_cam2FTI'],
+                    "Camera test 2"
+                )
 
-            if (not cfg['on_cam1']) or (not cfg['on_cam2']) or imgCam1 is None or imgCam2 is None:
+            if (not cfg['on_cam1']) or (not cfg['on_cam2']):
                 continue
 
-            imgCamFTI1 = auto_ProcessImage_onlyfti(imgCam1, maCam1YXZ)
-            imgCamFTI2 = auto_ProcessImage_onlyfti(imgCam2, maCam2YXZ)
-
-            imgCamFTI1Mask = auto_ProcessImage_onlyhand(
-                imgCam1, maCam1YXZ, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'])
-            imgCamFTI2Mask = auto_ProcessImage_onlyhand(
-                imgCam2, maCam2YXZ, cfg['gamma2'], cfg['fillCam2_01'], cfg['noseCam2'])
-
+            imgCamFTI1 = auto_ProcessImage_onlyfti(imgCam1, maCam1YXZ) #, gamma1, fillCam1_01, noseCam1)
+            imgCamFTI2 = auto_ProcessImage_onlyfti(imgCam2, maCam2YXZ) #, gamma2, fillCam2_01, noseCam2)
+            
+            imgCamFTI1Mask = auto_ProcessImage_onlyhand(imgCam1, maCam1YXZ, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'])
+            imgCamFTI2Mask = auto_ProcessImage_onlyhand(imgCam2, maCam2YXZ, cfg['gamma2'], cfg['fillCam2_01'], cfg['noseCam2'])
+            
             imgCamFTI1gray = cv2.cvtColor(imgCamFTI1, cv2.COLOR_BGR2GRAY)
             imgCamFTI2gray = cv2.cvtColor(imgCamFTI2, cv2.COLOR_BGR2GRAY)
-
-            res1 = cv2.bitwise_and(
-                imgCamFTI1gray, imgCamFTI1gray, mask=imgCamFTI1Mask)
-            res2 = cv2.bitwise_and(
-                imgCamFTI2gray, imgCamFTI2gray, mask=imgCamFTI2Mask)
-
+            
+            res1 = cv2.bitwise_and(imgCamFTI1gray, imgCamFTI1gray, mask=imgCamFTI1Mask)
+            res2 = cv2.bitwise_and(imgCamFTI2gray, imgCamFTI2gray, mask=imgCamFTI2Mask)
+            
             kernel = np.ones((3, 3), np.float32)/9
             res1 = cv2.filter2D(res1, -1, kernel)
             res2 = cv2.filter2D(res2, -1, kernel)
-
+            
             disparity = stereo.compute(res1, res2)
-            norm_disparity = cv2.normalize(
-                disparity, None, 10, 245, cv2.NORM_MINMAX)
-            color_disparity = cv2.applyColorMap(
-                norm_disparity.astype(np.uint8), cv2.COLORMAP_HSV)
+            norm_disparity = cv2.normalize(disparity, None, 10, 245, cv2.NORM_MINMAX)
+            color_disparity = cv2.applyColorMap(norm_disparity.astype(np.uint8), cv2.COLORMAP_HSV)
             bul_map = cv2.addWeighted(res1, 0.5, res2, 0.5, 0)
-            cv2.imshow("Debug 1", color_disparity)
-            cv2.imshow("Debug 2", bul_map)
-
+            
+            if cfg['on_debug']:
+                cv2.imshow("Debug 1", color_disparity)
+                cv2.imshow("Debug 2", bul_map)
+            
+            """
+            Process, Caculate point
+            """
             list_5_bestest_hull_point = []
             if len(contoursFigue_cam1) > 0:
                 list_highest_point_hull = []
                 for hulls in contoursFigue_cam1:
+                    # extract each point’s [x,y] and pick the one with max y
                     if len(hulls) > 0:
-                        highest_point_hull = max(hulls, key=lambda x: x[0][1])
-                        list_highest_point_hull.append(highest_point_hull[0])
+                        pts = np.array([pt[0] for pt in hulls])
+                        if pts.ndim == 2 and pts.shape[1] == 2:
+                            highest_point = pts[np.argmax(pts[:, 1])]
+                            list_highest_point_hull.append(highest_point)
 
                 if list_highest_point_hull:
                     list_highest_point_hull.sort(key=lambda x: -x[1])
                     cnt_5_bestest_hull_point = cfg['n_points_touch']
-                    delta_Point_np = np.array(
-                        cfg['delta_Point'], dtype=np.int32)
+                    delta_Point_np = np.array(cfg['delta_Point'], dtype=np.int32)
                     for point in list_highest_point_hull:
-                        list_5_bestest_hull_point.append(
-                            point + delta_Point_np)
+                        list_5_bestest_hull_point.append(point + delta_Point_np)
                         cnt_5_bestest_hull_point -= 1
                         if cnt_5_bestest_hull_point <= 0:
                             break

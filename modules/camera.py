@@ -55,6 +55,8 @@ class CameraSelf:
         self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, exposure_auto_value)
         self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure_value)
         self.cap.set(cv2.CAP_PROP_FPS, fps_value)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        self.cap.set(cv2.CAP_DSHOW, 1)
         self.imgself = None
         self.success = False
         self.is_flip = False
@@ -103,7 +105,7 @@ class CameraSelf:
         Some backends support direct white‑balance channels.
         """
         self.setProperty(cv2.CAP_PROP_WHITE_BALANCE_RED_V, red)
-        self.setProperty(cv2.CAP_PROP_WHITE_BALANCE_BLUE_V, blue)
+        self.setProperty(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, blue)
 
     def updateFrame(self):
         self.success, img = self.cap.read()
