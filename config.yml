@@ -12,8 +12,8 @@ param1: 160
 param2: 20
 minRadius: 10
 maxRadius: 50
-camera1_id: 1
-camera2_id: 0
+camera1_id: 0
+camera2_id: 1
 on_cam1: true
 on_cam2: true
 on_cam1Hsv: true
@@ -29,8 +29,8 @@ on_controller: false
 on_black_points_touch_screen: true
 on_paint_test: true
 on_debug: true
-gamma1: 0.6
-gamma2: 0.5
+gamma1: 0.5
+gamma2: 0.6
 noseCam1: [3, 3]
 noseCam2: [3, 3]
 fillCam1_01:
@@ -47,10 +47,10 @@ cam1_exposure: -8.5
 cam1_exposure_auto: 3
 cam2_exposure: -8.5
 cam2_exposure_auto: 3
-cam1_brightness: 0.0
-cam2_brightness: 130.0
-cam1_contrast: 155.0
-cam2_contrast: 190.0
+cam1_brightness: 130.0
+cam2_brightness: 0.0
+cam1_contrast: 128.0
+cam2_contrast: 155.0
 cam1_saturation: 128.0
 cam2_saturation: 128.0
 urlcam1: "http://192.168.137.155:8080/shot.jpg"
