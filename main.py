@@ -2,14 +2,9 @@
 Open library
 """
 from modules.helper import *
-import modules.smoothFun as smoothB
 from constant import *
 from config import cfg
-from modules.qrcode import QRCodeB
-from modules.imageProcess import ImageProcessor
-from modules.camera import CameraWebIP, CameraSelf
-from modules.projector import Projector
-from modules.math import MatrixBincase
+
 import cv2
 import numpy as np
 import threading
@@ -18,6 +13,17 @@ import pyautogui
 from pynput.mouse import Button, Controller
 import yaml
 import os
+
+import modules.smoothFun as smoothB
+from modules.qrcode import QRCodeB
+from modules.imageProcess import ImageProcessor
+from modules.camera import CameraWebIP, CameraSelf
+from modules.projector import Projector
+from modules.math import MatrixBincase
+
+import modules.patternMaker as patternMakerB
+import modules.calibrateCamera as calibrationB
+import modules.screenshot as screenshotB
 
 from sklearn.neighbors import KDTree
 
@@ -32,21 +38,24 @@ Init object
 mouse = Controller()
 
 matrixBincase = MatrixBincase()
-# imageProcesser = ImageProcessor()
+imageProcesser = ImageProcessor()
 # detectQR = cv2.QRCodeDetector()
 # qr = QRCodeB(version=cfg['qr_version'], box_size=cfg['qr_box_size'], border=cfg['qr_border'])
 stereo = cv2.StereoBM_create(
     numDisparities=cfg['numDisparitiesDepth'], blockSize=cfg['blockSizeDepth'])
 
+pm1 = patternMakerB.PatternMaker(cfg['size_chess'], fullscreensize[0], fullscreensize[1], cfg['corner_chess_size'])
+pm1.make_checkerboard_pattern()
+imgPattern = pm1.get()
+cvt_c = pm1.get_size_chess()
+print("Chess size: ", cvt_c)
+calibration = calibrationB.Calibration(cvt_c, cfg['num_image_cal'])
+
 ### Init camera ###
 camera1 = None
-camera2 = None
 if cfg['on_cam1']:
     camera1 = CameraSelf(cfg['camera1_id'], cfg['size_window'],
                          cfg['cam1_exposure'], cfg['cam1_exposure_auto'], cfg['fps_cam1'])
-if cfg['on_cam2']:
-    camera2 = CameraSelf(cfg['camera2_id'], cfg['size_window'],
-                         cfg['cam2_exposure'], cfg['cam2_exposure_auto'], cfg['fps_cam2'])
 
 """
 Function main process
@@ -72,39 +81,41 @@ def main_process():
             cfg.get('cam1_contrast', 128)),  255, lambda v: None)
         cv2.createTrackbar("Saturation1", "Camera Config", int(
             cfg.get('cam1_saturation', 128)), 255, lambda v: None)
-    if cfg['on_cam2']:
-        cv2.createTrackbar("Exp2",        "Camera Config", int(
-            (cfg['cam2_exposure'] + 10) * 10), 200, lambda v: None)
-        cv2.createTrackbar("AutoExp2",    "Camera Config", int(
-            cfg['cam2_exposure_auto']), 3, lambda v: None)
-        cv2.createTrackbar("Brightness2", "Camera Config", int(
-            cfg.get('cam2_brightness', 128)), 255, lambda v: None)
-        cv2.createTrackbar("Contrast2",   "Camera Config", int(
-            cfg.get('cam2_contrast', 128)),  255, lambda v: None)
-        cv2.createTrackbar("Saturation2", "Camera Config", int(
-            cfg.get('cam2_saturation', 128)), 255, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
-    if cfg['on_cam2'] and camera2:
-        camera2.start_thread()
 
     maCam1 = ((0, 0), (0, 0), (0, 0), (0, 0))
     maCam1YXZ = (maCam1[0], maCam1[2], maCam1[1], maCam1[3])
 
-    maCam2 = ((0, 0), (0, 0), (0, 0), (0, 0))
-    maCam2YXZ = (maCam2[0], maCam2[2], maCam2[1], maCam2[3])
-
+    # Case status
     is_detect_corners = False
-    step_detect_corners = 0
+    is_detect_corners_1 = False
+    is_detect_corners_2 = False
 
+    array_points_paint = []
+
+    # Event mouse
     mousePos = smoothB.average_vecN_smooth(cfg['numAverageMouseMove'])
-    valueCntNear = [smoothB.average_smooth(
-        cfg['numEleArgvan'])] * cfg['n_points_touch']
+    is_mouse_time_start = False
+    mouse_time_start = 0
+    first_mouse_pos = (0, 0)
+    last_mouse_pos = (0, 0)
 
+    ### Smooth system ###
+    mousePos = smoothB.average_vecN_smooth(cfg['numAverageMouseMove'])
+    valueCntNear = [smoothB.average_smooth(cfg['numEleArgvan'])] * cfg['n_points_touch']
+    old_clicked = False
+    old_right_clicked = False
+
+    ### FPS system ###
     start_time = time.time()
-    everyX = 1
+    everyX = 1  # displays the frame rate every 1 second
     counterFrame = 0
+
+    ### Currunt system config ###
+    # 0 = hand, 1 = pen
+    mode_running = 1
 
     FPP = cfg['FramePerProcess']
     curFPP = 0
@@ -118,283 +129,362 @@ def main_process():
 
         # apply realtime camera config settings
         if cfg['on_cam1'] and camera1:
-            raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
-            e1 = raw_e1 / 10.0 - 10.0
-            ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
-            camera1.setExposure(e1, ae1)
-            # pull brightness/contrast/saturation into cfg, then apply
-            raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
-            cfg['cam1_brightness'] = raw_b1
-            camera1.setBrightness(raw_b1)
-            raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
-            cfg['cam1_contrast'] = raw_c1
-            camera1.setContrast(raw_c1)
-            raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
-            cfg['cam1_saturation'] = raw_s1
-            camera1.setSaturation(raw_s1)
-        if cfg['on_cam2'] and camera2:
-            raw_e2 = cv2.getTrackbarPos("Exp2",        "Camera Config")
-            e2 = raw_e2 / 10.0 - 10.0
-            ae2 = cv2.getTrackbarPos("AutoExp2",    "Camera Config")
-            camera2.setExposure(e2, ae2)
-            # pull brightness/contrast/saturation into cfg, then apply
-            raw_b2 = cv2.getTrackbarPos("Brightness2", "Camera Config")
-            cfg['cam2_brightness'] = raw_b2
-            camera2.setBrightness(raw_b2)
-            raw_c2 = cv2.getTrackbarPos("Contrast2", "Camera Config")
-            cfg['cam2_contrast'] = raw_c2
-            camera2.setContrast(raw_c2)
-            raw_s2 = cv2.getTrackbarPos("Saturation2", "Camera Config")
-            cfg['cam2_saturation'] = raw_s2
-            camera2.setSaturation(raw_s2)
+            if mode_running == 0 or not is_detect_corners or not calibration.done:
+              raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
+              e1 = raw_e1 / 10.0 - 10.0
+              ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
+              camera1.setExposure(e1, ae1)
+              # pull brightness/contrast/saturation into cfg, then apply
+              raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
+              cfg['cam1_brightness'] = raw_b1
+              camera1.setBrightness(raw_b1)
+              raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
+              cfg['cam1_contrast'] = raw_c1
+              camera1.setContrast(raw_c1)
+              raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
+              cfg['cam1_saturation'] = raw_s1
+              camera1.setSaturation(raw_s1)
 
+        # Keyboard control
         q = cv2.waitKey(1)
         if q == ord('r'):
             is_detect_corners = False   # reset to re-detect corners
             step_detect_corners = 0
             print("Reset corners detection.")
-        if q == ord('q') or (cfg['on_cam1'] and camera1 and camera1.stopped) or (cfg['on_cam2'] and camera2 and camera2.stopped):
+        if q == ord('q') or (cfg['on_cam1'] and camera1 and camera1.stopped):
             if cfg['on_cam1'] and camera1:
                 camera1.stop()
-            if cfg['on_cam2'] and camera2:
-                camera2.stop()
             break
+        # if q == ord('1'):
+        #   mode_running = 0
+        #   print("switch to hand mode")
+        # if q == ord('2'):
+        #   mode_running = 1
+        #   print("switch to lazer mode")
+        
+        if q == ord('s'):
+          cfg['on_black_points_touch_screen'] = not cfg['on_black_points_touch_screen']
+          cv2.destroyWindow("Black points touch screen")
+          print("Switch black boand")
+          
+        if q == ord('c'):
+          cfg['on_controller'] = not cfg['on_controller']
+          
+          if cfg['on_controller'] == True:
+            print("On controller")
+          else:
+            print("False controller")
+        
+        if q == ord('r'):
+          camera1.setExposure(cfg['cam1_exposure'], cfg['cam1_exposure_auto'])
+          is_detect_corners_1 = False
+          is_detect_corners_2 = False
+          is_detect_corners = False
+          calibration.reset()
+          print("Start reset")
+        if q == ord('p'):
+          array_points_paint = []
+          print("Reset paint")
 
+        """
+        Drop frame
+        """
         curFPP += 1
         if curFPP < FPP:
-            continue
+          continue
         else:
-            curFPP = 0
+          curFPP = 0
+        
+        """
+        Count FPS
+        """
+        counterFrame+=1
+        if (time.time() - start_time) > everyX :
+          if cfg['show_FPS_console']:
+            print("FPS: ", counterFrame / (time.time() - start_time))
+          counterFrame = 0
+          start_time = time.time()
 
         imgCam1 = None
-        imgCam2 = None
         if cfg['on_cam1'] and camera1:
-            imgCam1 = camera1.getFrame()
-        if cfg['on_cam2'] and camera2:
-            imgCam2 = camera2.getFrame()
+          imgCam1 = camera1.getFrame()
 
-        if (cfg['on_cam1'] and imgCam1 is None) or (cfg['on_cam2'] and imgCam2 is None):
-            if not is_detect_corners:
-                time.sleep(0.1)
-            continue
+        if (cfg['on_cam1'] and imgCam1 is None):
+          if not is_detect_corners:
+              time.sleep(0.1)
+          continue
 
         if cfg['on_debug']:
             if cfg['on_cam1'] and imgCam1 is not None:
                 cv2.imshow("Camera test 1", imgCam1)
                 cv2.setMouseCallback(
                     "Camera test 1", onMouse, param=(imgCam1, cfg['gamma1']))
+                
+        imgCam1_onlyc1 = None
+        if is_detect_corners_1:
+          imgCam1 = matrixBincase.fast_tranform_image_opencv(imgCam1, maCam1YXZ, size_window)
+        if calibration.done:
+          mtx, dist, newcameramtx, roi = calibration.get()
+          imgCam1 = imageProcesser.undistort(imgCam1, mtx, dist, newcameramtx, roi)
+        if is_detect_corners_1 and calibration.done:
+          imgCam1_onlyc1 = np.copy(imgCam1)
+        if is_detect_corners_2:
+          imgCam1 = matrixBincase.fast_tranform_image_opencv(imgCam1, maCam2YXZ, size_window)
 
-            if cfg['on_cam2'] and imgCam2 is not None:
-                cv2.imshow("Camera test 2", imgCam2)
-                cv2.setMouseCallback(
-                    "Camera test 2", onMouse, param=(imgCam2, cfg['gamma2']))
-        #   continue
+        if not is_detect_corners or (not calibration.done):
+            if not is_detect_corners_1:
+              showOneBigQRcorners()
+              if cfg['on_cam1'] and imgCam1 is not None:
+                  is_detect_corners_1, maCam1, maCam1YXZ = get4CornersSimple(imgCam1, lambda x: (
+                      x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
 
-        if not is_detect_corners:
-            # showQRcorners()
-            showOneBigQRcorners()
-            is_detect_corners_1, is_detect_corners_2 = False, False
-            # if cfg['on_cam1'] and imgCam1 is not None:
-            #     is_detect_corners_1, maCam1, maCam1YXZ = get4Corners(imgCam1, lambda x: (
-            #         x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
-            # if cfg['on_cam2'] and imgCam2 is not None:
-            #     is_detect_corners_2, maCam2, maCam2YXZ = get4Corners(imgCam2, lambda x: (
-            #         x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
-
-            if cfg['on_cam1'] and imgCam1 is not None:
-                is_detect_corners_1, maCam1, maCam1YXZ = get4CornersSimple(imgCam1, lambda x: (
-                    x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
-            if cfg['on_cam2'] and imgCam2 is not None:
-                is_detect_corners_2, maCam2, maCam2YXZ = get4CornersSimple(imgCam2, lambda x: (
-                    x[0], x[2], x[1], x[3]), delta_point=tuple(cfg['delta_point_qr']))
-
-            if (is_detect_corners_1 or not cfg['on_cam1']) and (is_detect_corners_2 or not cfg['on_cam2']):
+                  if (is_detect_corners_1 or not cfg['on_cam1']):
+                      is_detect_corners = True
+                      destroyQRcorners()
+                      print("Corners detected.")
+                  else:
+                      time.sleep(0.05)
+            elif not calibration.done:
+              setFullScreenCV("imgPattern")
+              cv2.imshow("imgPattern", imgPattern)
+              calibration.add(imgCam1)
+              if calibration.done:
+                # ~ screenshotB.startTheard()
                 is_detect_corners = True
-                destroyQRcorners()
-                print("Corners detected.")
-            else:
-                time.sleep(0.05)
+                # cv2.destroyAllWindows()
+                cv2.destroyWindow("imgPattern")
         else:
-            if cfg['on_config']:
-                if cfg['on_cam1'] and imgCam1 is not None:
-                    imgCam1Draw = np.copy(imgCam1)
-                    matrixBincase.draw_line(
-                        imgCam1Draw, maCam1YXZ[0], maCam1YXZ[1], maCam1YXZ[2], maCam1YXZ[3], 3)
-                    cv2.imshow("Camera test 1", imgCam1Draw)
-                    cv2.setMouseCallback(
-                        "Camera test 1", onMouse, param=(imgCam1, cfg['gamma1']))
+          if cfg['on_config']:
+            if cfg['on_cam1'] and imgCam1 is not None:
+              imgCam1Draw = np.copy(imgCam1)
+              matrixBincase.draw_line(
+                  imgCam1Draw, maCam1YXZ[0], maCam1YXZ[1], maCam1YXZ[2], maCam1YXZ[3], 3)
+              cv2.imshow("Camera test 1", imgCam1Draw)
+              cv2.setMouseCallback(
+                  "Camera test 1", onMouse, param=(imgCam1, cfg['gamma1']))
 
-                if cfg['on_cam2'] and imgCam2 is not None:
-                    imgCam2Draw = np.copy(imgCam2)
-                    matrixBincase.draw_line(
-                        imgCam2Draw, maCam2YXZ[0], maCam2YXZ[1], maCam2YXZ[2], maCam2YXZ[3], 3)
-                    cv2.imshow("Camera test 2", imgCam2Draw)
-                    cv2.setMouseCallback(
-                        "Camera test 2", onMouse, param=(imgCam2, cfg['gamma2']))
-
-                # continue
-
+          # Preprocess image
+          if mode_running == 0: # Mode figue
+            """
+            Camera 1: camera
+            """
             contoursFigue_cam1 = []
             if cfg['on_cam1']:
-                contoursFigue_cam1 = auto_ProcessImage(
-                    imgCam1,
-                    maCam1YXZ,
-                    cfg['gamma1'],
-                    cfg['fillCam1_01'],
-                    cfg['noseCam1'],
-                    cfg['on_show_cam1'],
-                    cfg['on_cam1Hsv'],
-                    cfg['on_cam1Ycbcr'],
-                    cfg['on_cam1FTI'],
-                    "Camera test 1"
-                )
+              contoursFigue_cam1 = auto_ProcessImage_nofti(imgCam1_onlyc1, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'], cfg['on_show_cam1'], cfg['on_cam1Hsv'], cfg['on_cam1Ycbcr'], cfg['on_cam1FTI'], "Camera test 1")
 
-            contoursFigue_cam2 = []
-            if cfg['on_cam2']:
-                contoursFigue_cam2 = auto_ProcessImage(
-                    imgCam2,
-                    maCam2YXZ,
-                    cfg['gamma2'],
-                    cfg['fillCam2_01'],
-                    cfg['noseCam2'],
-                    cfg['on_show_cam2'],
-                    cfg['on_cam2Hsv'],
-                    cfg['on_cam2Ycbcr'],
-                    cfg['on_cam2FTI'],
-                    "Camera test 2"
-                )
+          elif mode_running == 1: # Mode lazer pen
+            camera1.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+            camera1.setProperty(cv2.CAP_PROP_EXPOSURE, -15)
+            camera1.setProperty(cv2.CAP_PROP_BRIGHTNESS, 0)
+            camera1.setProperty(cv2.CAP_PROP_CONTRAST, 255//2)
+            camera1.setProperty(cv2.CAP_PROP_SATURATION, 255//2)
+            camera1.setProperty(cv2.CAP_PROP_GAIN, 255//2)
 
-            if (not cfg['on_cam1']) or (not cfg['on_cam2']):
-                continue
+            # camera1.setExposure(10, 1)
+            imgCam1 = camera1.getFrame()
+            
+            contoursFigue_cam1 = []
+            if cfg['on_cam1']:
+                imgCamFTI = np.copy(imgCam1)
+                imgFigue = cv2.inRange(imgCamFTI, (0, 0, 60), (255, 255, 255))
+                if cfg['on_debug']:
+                    cv2.imshow("imgCamFTI", imgCamFTI)
+                contoursFigue_cam1, hierarchyFigue = cv2.findContours(imgFigue, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-            imgCamFTI1 = auto_ProcessImage_onlyfti(imgCam1, maCam1YXZ) #, gamma1, fillCam1_01, noseCam1)
-            imgCamFTI2 = auto_ProcessImage_onlyfti(imgCam2, maCam2YXZ) #, gamma2, fillCam2_01, noseCam2)
-            
-            imgCamFTI1Mask = auto_ProcessImage_onlyhand(imgCam1, maCam1YXZ, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'])
-            imgCamFTI2Mask = auto_ProcessImage_onlyhand(imgCam2, maCam2YXZ, cfg['gamma2'], cfg['fillCam2_01'], cfg['noseCam2'])
-            
-            imgCamFTI1gray = cv2.cvtColor(imgCamFTI1, cv2.COLOR_BGR2GRAY)
-            imgCamFTI2gray = cv2.cvtColor(imgCamFTI2, cv2.COLOR_BGR2GRAY)
-            
-            res1 = cv2.bitwise_and(imgCamFTI1gray, imgCamFTI1gray, mask=imgCamFTI1Mask)
-            res2 = cv2.bitwise_and(imgCamFTI2gray, imgCamFTI2gray, mask=imgCamFTI2Mask)
-            
-            kernel = np.ones((3, 3), np.float32)/9
-            res1 = cv2.filter2D(res1, -1, kernel)
-            res2 = cv2.filter2D(res2, -1, kernel)
-            
-            disparity = stereo.compute(res1, res2)
-            norm_disparity = cv2.normalize(disparity, None, 10, 245, cv2.NORM_MINMAX)
-            color_disparity = cv2.applyColorMap(norm_disparity.astype(np.uint8), cv2.COLORMAP_HSV)
-            bul_map = cv2.addWeighted(res1, 0.5, res2, 0.5, 0)
-            
-            if cfg['on_debug']:
-                cv2.imshow("Debug 1", color_disparity)
-                cv2.imshow("Debug 2", bul_map)
-            
-            """
-            Process, Caculate point
-            """
-            list_5_bestest_hull_point = []
-            if len(contoursFigue_cam1) > 0:
-                list_highest_point_hull = []
+          # Process image
+          if (not cfg['on_cam1']):
+              continue
+
+          """
+          Process, Caculate point
+          """
+          list_5_bestest_hull_point = []
+          areaValueOr = 0
+          areaValueCr = 0
+          ratioClicked = 1
+          vectorClickLen = 0
+          if len(contoursFigue_cam1) > 0:
+
+            if mode_running == 0:
+              """
+              Caculate point click
+              """
+              list_highest_point_hull = []
+              for hulls in contoursFigue_cam1:
+                highest_point_hull = max(hulls, key=lambda x: x[0][1])
+                list_highest_point_hull.append(highest_point_hull[0])
+              list_highest_point_hull.sort(key=lambda x: -x[1])
+              cnt_5_bestest_hull_point = cfg['n_points_touch']
+              for point in list_highest_point_hull:
+                list_5_bestest_hull_point.append(point + cfg['delta_Point'])
+                cnt_5_bestest_hull_point -= 1
+                if cnt_5_bestest_hull_point <= 0:
+                    break
+              for i in range(0, len(list_5_bestest_hull_point)):
+                list_5_bestest_hull_point[i] = matrixBincase.tramform_points(
+                  list_5_bestest_hull_point[i], maCam2YXZ, size_window)
+
+              """
+              Caculate info of convexHull
+              """
+              if len(contoursFigue_cam1) > 0:
+                  np_contours = np.vstack(
+                      contoursFigue_cam1).reshape((-1, 1, 2))
+                  chull = cv2.convexHull(np_contours)
+
+                  imgDrawC = np.zeros(
+                      (size_window[1], size_window[0], 3))
+                  imgDrawC = cv2.drawContours(
+                      imgDrawC, chull, -1, (0, 255, 0), 3)
+
+                  areaValueOr = cv2.contourArea(chull)
+
+                  Moo = cv2.moments(chull)
+                  cx = int(Moo['m10']/Moo['m00'])
+                  cy = int(Moo['m01']/Moo['m00'])
+                  vectorClickLen = distanceB2Points(
+                      list_5_bestest_hull_point[0], [cx, cy])
+
+                  (x, y), radius = cv2.minEnclosingCircle(chull)
+                  center = (int(x), int(y))
+                  radius = int(radius)
+                  areaValueCr = radius*radius*np.pi
+
+                  ratioClicked = (areaValueOr + 0.001) / \
+                      (areaValueCr + 0.001)
+
+                  cv2.circle(imgDrawC, center, radius,
+                              cfg['color_clicked'], 1, cv2.LINE_AA)
+                  cv2.imshow("imgDrawC", imgDrawC)
+
+            elif mode_running == 1:
+                cnt_5_bestest_hull_point = cfg['n_points_touch']
                 for hulls in contoursFigue_cam1:
-                    # extract each point’s [x,y] and pick the one with max y
-                    if len(hulls) > 0:
-                        pts = np.array([pt[0] for pt in hulls])
-                        if pts.ndim == 2 and pts.shape[1] == 2:
-                            highest_point = pts[np.argmax(pts[:, 1])]
-                            list_highest_point_hull.append(highest_point)
+                    point = np.median(hulls, axis=0)[0]
+                    list_5_bestest_hull_point.append(
+                        (int(point[0] + cfg['delta_Point'][0]), int(point[1] + cfg['delta_Point'][1])))
+                    cnt_5_bestest_hull_point -= 1
+                    if cnt_5_bestest_hull_point <= 0:
+                        break
 
-                if list_highest_point_hull:
-                    list_highest_point_hull.sort(key=lambda x: -x[1])
-                    cnt_5_bestest_hull_point = cfg['n_points_touch']
-                    delta_Point_np = np.array(cfg['delta_Point'], dtype=np.int32)
-                    for point in list_highest_point_hull:
-                        list_5_bestest_hull_point.append(point + delta_Point_np)
-                        cnt_5_bestest_hull_point -= 1
-                        if cnt_5_bestest_hull_point <= 0:
-                            break
+          """
+          Check clicked points touch
+          """
+          isClicked = False
+          isClickedPoints = [False] * len(list_5_bestest_hull_point)
+          if mode_running == 0:
+              # ~ print(ratioClicked, " : ", areaValueOr , "/", areaValueCr)
+              # ~ if vectorClickLen >= 50.0:
+              if ratioClicked <= 0.45:
+                  isClicked = True
+                  isClickedPoints = [True] * len(list_5_bestest_hull_point)
+          elif mode_running == 1:
+              if len(list_5_bestest_hull_point) > 0:
+                  isClicked = True
+                  isClickedPoints = [True] * len(list_5_bestest_hull_point)
 
-            isClicked = False
-            isClickedPoints = [False] * len(list_5_bestest_hull_point)
+          """
+          Mode: Black points touch screen
+          """
+          if cfg['on_black_points_touch_screen']:
+            # imgFigueDraw = np.copy(imgCamFTI)
+            imgFigueDraw = np.zeros((size_window[1], size_window[0], 3))
+            imgFigueDraw[:, :] = (0, 0, 0)
+            index_contourF = 0
+            if cfg['on_paint_test']:
+                for point in array_points_paint:
+                    cv2.circle(
+                        imgFigueDraw, point, cfg['maxRadiusFigueContour'], (255, 255, 255), -1, cv2.LINE_AA)
+            for point in list_5_bestest_hull_point:
+                if isClickedPoints[index_contourF]:
+                    array_points_paint.append(point)
+                    cv2.circle(
+                        imgFigueDraw, point, cfg['maxRadiusFigueContour'], cfg['color_clicked'], -1, cv2.LINE_AA)
+                else:
+                    cv2.circle(imgFigueDraw, point, cfg['maxRadiusFigueContour'],
+                                cfg['color_nonClicked'], -1, cv2.LINE_AA)
+                index_contourF += 1
+            imgFigueDraw = cv2.resize(imgFigueDraw, fullscreensize)
+            if not cfg['is_debug_clicked']:
+                setFullScreenCV("Black points touch screen")
+            cv2.imshow("Black points touch screen", imgFigueDraw)
 
-            for i in range(0, min(len(list_5_bestest_hull_point), cfg['n_points_touch'])):
-                valueCntNear[i].add(0)
+          """
+          Process UI, Control mouse or touchscreen
+          """
+          mousePos.add((0, 0))
+          if cfg['on_cam1'] and cfg['on_controller']:
+            if len(list_5_bestest_hull_point) > 0:
+              # Convert img pos to window pos
+              width, height = pyautogui.size()
+              pointMouseNow = list_5_bestest_hull_point[0]
+              if cfg['is_flip_mouse']:
+                mouseComputer = (int(
+                    pointMouseNow[0]*width/size_window[0]), int(pointMouseNow[1]*height/size_window[1]))
+              else:
+                mouseComputer = (int(width - pointMouseNow[0]*width/size_window[0]), int(
+                  height - pointMouseNow[1]*height/size_window[1]))
 
-            if len(contoursFigue_cam2) > 0 and len(list_5_bestest_hull_point) > 0:
-                try:
-                    np_contours = np.vstack(contoursFigue_cam2).reshape(-1, 2)
-                    if np_contours.size > 0:
-                        index_contourF = 0
-                        kdtree = KDTree(np_contours, leaf_size=2)
+              # Time
+              if isClicked:
+                if not is_mouse_time_start:
+                  mouse_time_start = time.time()
+                  is_mouse_time_start = True
+                  first_mouse_pos = mouseComputer
+                  last_mouse_pos = mouseComputer
+                if distanceB2Points(mouseComputer, first_mouse_pos) > distanceB2Points(last_mouse_pos, first_mouse_pos):
+                  last_mouse_pos = mouseComputer
 
-                        for contourF in list_5_bestest_hull_point:
-                            if index_contourF >= len(valueCntNear):
-                                break
+              if mouseComputer >= (0, 0):
+                mousePos.addPrev(mouseComputer)
+                mouse.position = mouseComputer
+                # ~ mouse.move(mouseComputer[0], mouseComputer[1])
+              if isClicked and (not old_clicked):
+                # Press and release
+                mouse.click(Button.left)
+                old_clicked = True
 
-                            cntNear = 0
-                            contourF_reshape = contourF.reshape(1, -1)
-                            cntNear = kdtree.query_radius(
-                                contourF_reshape, r=cfg['maxRadiusFigueWithFigueShallow'], count_only=True)[0]
+                # Double click
+                # mouse.click(Button.left, 2)
 
-                            valueCntNear[index_contourF].addPrev(cntNear)
-                            cntArgvanNear = valueCntNear[index_contourF].getAverage(
-                            )
-                            if cfg['is_debug_clicked']:
-                                print(
-                                    f"Point {index_contourF}: AvgNear={cntArgvanNear:.2f} (Threshold: {cfg['deltaContoursClicked']})")
-                            if cntArgvanNear > cfg['deltaContoursClicked']:
-                                isClickedPoints[index_contourF] = True
-                                isClicked = True
-                            index_contourF += 1
-                except ValueError as e:
-                    print(f"Error processing contoursFigue_cam2: {e}")
-                    isClicked = False
-                    isClickedPoints = [False] * len(list_5_bestest_hull_point)
+                # Scroll two steps down
+                # mouse.scroll(0, 2)
+              elif isClicked and ((time.time() - mouse_time_start) > cfg['time_delay_press']):
+                mouse.press(Button.left)
+                old_clicked = True
+              elif not isClicked:
+                if is_mouse_time_start:
+                  if ((time.time() - mouse_time_start) > cfg['time_delay_press']):
+                    mouse.release(Button.left)
 
-            if cfg['on_black_points_touch_screen']:
-                imgFigueDraw = np.zeros(
-                    (size_window[1], size_window[0], 3), dtype=np.uint8)
-                index_contourF = 0
-                for point in list_5_bestest_hull_point:
-                    point_tuple = tuple(point.astype(int))
-                    color = tuple(cfg['color_clicked']) if isClickedPoints[index_contourF] else tuple(
-                        cfg['color_nonClicked'])
-                    radius = cfg['maxRadiusFigueContour']
-                    cv2.circle(imgFigueDraw, point_tuple,
-                               radius, color, -1, cv2.LINE_AA)
-                    index_contourF += 1
+                  if (not old_right_clicked):
+                    # ~ print((time.time() - mouse_time_start), distanceB2Points(last_mouse_pos, first_mouse_pos))
+                    if ((time.time() - mouse_time_start) > cfg['time_delay_right_click']) and (distanceB2Points(last_mouse_pos, first_mouse_pos) <= cfg['circle_in_right_click']):
+                        mouse.click(Button.right)
+                        old_right_clicked = True
 
-                imgFigueDraw_resized = cv2.resize(imgFigueDraw, fullscreensize)
-                if not cfg['is_debug_clicked']:
-                    setFullScreenCV("Black points touch screen")
-                cv2.imshow("Black points touch screen", imgFigueDraw_resized)
+                    # mouse.position = (0, 0)
 
-            mousePos.add((0, 0))
-            if cfg['on_cam1'] and cfg['on_cam2'] and cfg['on_controller']:
-                if len(list_5_bestest_hull_point) > 0:
-                    width, height = pyautogui.size()
-                    pointMouseNow = list_5_bestest_hull_point[0]
-                    if cfg['is_flip_mouse']:
-                        mouseComputer = (int(
-                            pointMouseNow[0]*width/size_window[0]), int(pointMouseNow[1]*height/size_window[1]))
-                    else:
-                        mouseComputer = (int(width - pointMouseNow[0]*width/size_window[0]), int(
-                            height - pointMouseNow[1]*height/size_window[1]))
+                old_clicked = False
+                old_right_clicked = False
+                is_mouse_time_start = False
 
-                    mouseComputer = (max(
-                        0, min(width - 1, mouseComputer[0])), max(0, min(height - 1, mouseComputer[1])))
+              else:
+                if is_mouse_time_start:
+                  if ((time.time() - mouse_time_start) > cfg['time_delay_press']):
+                    mouse.release(Button.left)
 
-                    if mouseComputer >= (0, 0):
-                        smoothedMousePos = tuple(
-                            map(int, mousePos.addPrev(mouseComputer)))
-                        mouse.position = smoothedMousePos
+                  if (not old_right_clicked):
+                    # ~ print((time.time() - mouse_time_start), distanceB2Points(last_mouse_pos, first_mouse_pos))
+                    if ((time.time() - mouse_time_start) > cfg['time_delay_right_click']) and (distanceB2Points(last_mouse_pos, first_mouse_pos) <= cfg['circle_in_right_click']):
+                      mouse.click(Button.right)
+                      old_right_clicked = True
 
-                        if isClickedPoints[0]:
-                            mouse.click(Button.left)
+                  # mouse.position = (0, 0)
 
-    cv2.destroyAllWindows()
+                old_clicked = False
+                old_right_clicked = False
+                is_mouse_time_start = False
 
 
 """

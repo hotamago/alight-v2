@@ -52,8 +52,6 @@ class CameraSelf:
         self.cap = cv2.VideoCapture(id_cam)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, size_out[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size_out[1])
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, exposure_auto_value)
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure_value)
         self.cap.set(cv2.CAP_PROP_FPS, fps_value)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_DSHOW, 1)
@@ -62,10 +60,42 @@ class CameraSelf:
         self.is_flip = False
         self.flip_mode = 0
         self.stopped = True
+
+        self.property_config = {
+            cv2.CAP_PROP_AUTO_EXPOSURE: exposure_auto_value,
+            cv2.CAP_PROP_EXPOSURE: exposure_value,
+            cv2.CAP_PROP_BRIGHTNESS: None,
+            cv2.CAP_PROP_CONTRAST: None,
+            cv2.CAP_PROP_SATURATION: None,
+            cv2.CAP_PROP_HUE: None,
+            cv2.CAP_PROP_GAIN: None,
+        }
+        self.reapply_properties()
+
         self.updateFrame()
 
+    def reapply_properties(self):
+        for prop, value in self.property_config.items():
+            if value is not None:
+                res = self.cap.set(prop, value)
+                if not res:
+                    raise ValueError(f"Failed to set property {cap_prop} to {value}.")
+
     def setProperty(self, cap_prop, value):
-        self.cap.set(cap_prop, value)
+        # Check if proerty change is needed
+        if self.property_config.get(cap_prop) == value:
+            return
+        # Check if the property is supported
+        if not self.cap.isOpened():
+            raise ValueError("Camera is not opened. Cannot set properties.")
+        # Current value
+        print(f"Current value of {cap_prop}: {self.cap.get(cap_prop)}")
+        # Set the property
+        self.property_config[cap_prop] = value
+        # self.reapply_properties()
+        res = self.cap.set(cap_prop, value)
+        if not res:
+            raise ValueError(f"Failed to set property {cap_prop} to {value}.")
 
     def setExposure(self, exposure_value, exposure_auto_value=0):
         """
@@ -82,8 +112,8 @@ class CameraSelf:
         Toggle auto exposure.
         OpenCV uses 0.25 for manual, 0.75 for auto on some backends—adjust as needed.
         """
-        mode = 0.75 if enable else 0.25
-        self.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, mode)
+        # self.property_config[cv2.CAP_PROP_AUTO_EXPOSURE] = 0.75 if enable else 0.25
+        pass
 
     def setBrightness(self, value):
         self.setProperty(cv2.CAP_PROP_BRIGHTNESS, value)

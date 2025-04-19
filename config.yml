@@ -1,87 +1,182 @@
+# --- General Settings ---
+# Enable/disable multi-threading for processing (boolean: true/false)
 is_multi_thead: false
-num_image_cal: 15
-size_chess: 12
-corner_chess_size: [10, 10]
+# Number of images to use for camera calibration (integer > 0)
+num_image_cal: 10
+# Size of the chessboard pattern (inner corners count, integer > 0)
+size_chess: 8
+# Size of the corner squares on the chessboard pattern in pixels (list: [width, height])
+corner_chess_size: [50, 50]
+
+# --- QR Code Settings ---
+# QR code version (integer: 1-40, controls size)
 qr_version: 1
+# Size of each QR code module/box in pixels (integer > 0)
 qr_box_size: 18
+# Width of the border around the QR code in modules (integer >= 0)
 qr_border: 2
+# Ratio of the QR code size relative to the screen size for the center QR display (float: 0.0-1.0)
 qr_radio_screen_size: 0.8
+# Expected QR code data values for corner detection (list of strings)
+set_detect_value_qr: ["tl", "tr", "bl", "br"]
+# Core identifier string used in QR code data (string)
+core_value_qr: "bincase-core"
+# Pixel offset applied to detected QR corner points (list: [delta_x, delta_y])
+delta_point_qr: [5, 5]
+
+# --- Circle Detection Settings (Hough Circle Transform) ---
+# Radius of circles on the chessboard pattern (integer > 0)
 radius_c_chess: 45
+# Minimum distance between detected circle centers (integer > 0)
 minDist: 60
+# First parameter for Hough Circle Transform (gradient value) (integer > 0)
 param1: 160
+# Second parameter for Hough Circle Transform (accumulator threshold) (integer > 0)
 param2: 20
+# Minimum radius of detected circles (integer >= 0)
 minRadius: 10
+# Maximum radius of detected circles (integer > 0)
 maxRadius: 50
+# Pixel offset applied to detected circle center points (list: [delta_x, delta_y])
+delta_point_circle: [25, 25]
+
+# --- Chessboard Detection Settings ---
+# Pixel offset applied to detected chessboard corner points (list: [delta_x, delta_y])
+delta_point_chess: [25, 30]
+
+# --- Camera Settings ---
+# Camera ID for the first camera (integer >= 0 or string for device path)
 camera1_id: 0
+# Camera ID for the second camera (integer >= 0 or string for device path)
 camera2_id: 1
+# Enable/disable processing for camera 1 (boolean: true/false)
 on_cam1: true
+# Enable/disable processing for camera 2 (boolean: true/false)
 on_cam2: true
+# Enable/disable HSV color space processing for camera 1 (boolean: true/false)
 on_cam1Hsv: true
+# Enable/disable HSV color space processing for camera 2 (boolean: true/false)
 on_cam2Hsv: true
+# Enable/disable YCbCr color space processing for camera 1 (boolean: true/false)
 on_cam1Ycbcr: false
+# Enable/disable YCbCr color space processing for camera 2 (boolean: true/false)
 on_cam2Ycbcr: false
+# Enable/disable FTI (Fast Thresholding Inversion?) processing for camera 1 (boolean: true/false)
 on_cam1FTI: false
+# Enable/disable FTI processing for camera 2 (boolean: true/false)
 on_cam2FTI: false
+# Enable/disable camera configuration window (boolean: true/false)
 on_config: true
+# Enable/disable display window for camera 1 feed (boolean: true/false)
 on_show_cam1: true
+# Enable/disable display window for camera 2 feed (boolean: true/false)
 on_show_cam2: true
-on_controller: false
-on_black_points_touch_screen: true
-on_paint_test: true
-on_debug: true
+# Gamma correction value for camera 1 (float > 0.0)
 gamma1: 0.5
+# Gamma correction value for camera 2 (float > 0.0)
 gamma2: 0.6
+# Kernel size for noise reduction (e.g., median blur) for camera 1 (list: [kernel_width, kernel_height], odd integers)
 noseCam1: [3, 3]
+# Kernel size for noise reduction for camera 2 (list: [kernel_width, kernel_height], odd integers)
 noseCam2: [3, 3]
+# Color range filters for camera 1 (list of lists: [[lower_bound], [upper_bound]]) - format depends on color space (HSV, YCbCr)
 fillCam1_01:
-  - [[0, 90, 10], [35, 190, 150]]
-  - [[0, 0, 0], [255, 180, 135]]
+  - [[0, 90, 10], [35, 190, 150]] # Example HSV range
+  - [[0, 0, 0], [255, 180, 135]] # Example YCbCr range
+# Color range filters for camera 2
 fillCam2_01:
   - [[0, 90, 10], [35, 190, 150]]
   - [[0, 0, 0], [255, 180, 135]]
+# Enable/disable flipping for camera 1 feed (boolean: true/false)
 is_cam1_flip: false
+# Enable/disable flipping for camera 2 feed (boolean: true/false)
 is_cam2_flip: false
+# Flip mode for camera 1 (integer: 0=vertical, 1=horizontal, -1=both)
 cam1_flip_mode: -1
+# Flip mode for camera 2 (integer: 0=vertical, 1=horizontal, -1=both)
 cam2_flip_mode: -1
-cam1_exposure: -8.5
+# Exposure value for camera 1 (float, range depends on camera, e.g., -13.0 to 0.0)
+cam1_exposure: -7.0
+# Auto exposure mode for camera 1 (integer, depends on camera backend, e.g., 0=manual, 1=auto, 3=aperture_priority)
 cam1_exposure_auto: 3
+# Exposure value for camera 2
 cam2_exposure: -8.5
+# Auto exposure mode for camera 2
 cam2_exposure_auto: 3
-cam1_brightness: 130.0
+# Brightness value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
+cam1_brightness: 136.0
+# Brightness value for camera 2
 cam2_brightness: 0.0
-cam1_contrast: 128.0
+# Contrast value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
+cam1_contrast: 180.0
+# Contrast value for camera 2
 cam2_contrast: 155.0
+# Saturation value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
 cam1_saturation: 128.0
+# Saturation value for camera 2
 cam2_saturation: 128.0
+# URL for IP camera 1 (string, if using IP cameras)
 urlcam1: "http://192.168.137.155:8080/shot.jpg"
+# URL for IP camera 2
 urlcam2: "http://192.168.137.182:8080/shot.jpg"
+# Target FPS for camera 1 (integer > 0)
 fps_cam1: 15
+# Target FPS for camera 2 (integer > 0)
 fps_cam2: 15
-minDisparity: 15
+
+# --- Stereo Vision Settings (StereoBM) ---
+# Minimum disparity value (integer, must be > 0 and divisible by 16)
+minDisparity: 15 # Note: OpenCV docs often say >0, but practical use might need tuning. Should be divisible by 16? Check specific algo needs.
+# Number of disparities range (integer, must be > 0 and divisible by 16)
 numDisparitiesDepth: 64
+# Block size for matching (integer, odd number >= 5)
 blockSizeDepth: 15
+
+# --- Processing & Control Settings ---
+# Process every Nth frame (integer >= 1)
 FramePerProcess: 1
-maxFamesClicked: 5
+# Enable/disable mouse/touch control (boolean: true/false)
+on_controller: false
+# Enable/disable the black screen drawing mode (boolean: true/false)
+on_black_points_touch_screen: true
+# Enable/disable painting test points on the black screen (boolean: true/false)
+on_paint_test: true
+# Enable/disable debug mode (extra logging/windows) (boolean: true/false)
+on_debug: true
+# Enable/disable flipping of mouse coordinates (boolean: true/false)
 is_flip_mouse: true
+# Pixel offset applied to detected touch points (list: [delta_x, delta_y])
 delta_Point: [0, 0]
+# Number of touch points to detect/track (integer >= 1)
 n_points_touch: 1
+# Threshold for contour proximity when detecting clicks? (integer > 0) - Needs clarification
 deltaContoursClicked: 3
+# Maximum radius for combining nearby finger contours? (integer > 0) - Needs clarification
 maxRadiusFigueWithFigueShallow: 12
+# Enable/disable debug information for click detection (boolean: true/false)
 is_debug_clicked: false
+# Number of elements for averaging/smoothing (e.g., contour area)? (integer > 0) - Needs clarification
 numEleArgvan: 5
+# Number of previous positions to average for mouse smoothing (integer >= 1)
 numAverageMouseMove: 8
+# Time delay (seconds) before registering a press/hold action (float >= 0.0)
 time_delay_press: 0.1
+# Time delay (seconds) after press start to register a right-click (if no movement) (float >= 0.0)
 time_delay_right_click: 0.8
+# Maximum movement distance (pixels) allowed during right-click delay (integer >= 0)
 circle_in_right_click: 60
+# Maximum radius for drawing detected finger/touch contours (integer > 0)
 maxRadiusFigueContour: 10
+# Color for non-clicked touch points (BGR list: [B, G, R])
 color_nonClicked: [0, 255, 0]
+# Color for clicked touch points (BGR list: [B, G, R])
 color_clicked: [0, 0, 255]
+# Show FPS in the console output (boolean: true/false)
 show_FPS_console: false
+
+# --- Window Size Settings ---
+# Processing/display window size (list: [width, height])
 # size_window: [640, 480]
 size_window: [1280, 720]
+# Fullscreen/projector resolution (list: [width, height])
 fullscreensize: [1920, 1080]
-set_detect_value_qr: ["tl", "tr", "bl", "br"]
-core_value_qr: "bincase-core"
-delta_point_qr: [5, 5]
-delta_point_chess: [25, 30]
-delta_point_circle: [25, 25]
