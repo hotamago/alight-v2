@@ -27,6 +27,6 @@ c = on, off control by mouse
 ## Hardware
 ```
 - 1 x Projector
-- 1 x camera (USB or IP camera)
+- 1 x camera (USB or IP camera) have OpenCV support, important because it need to config some variables of Hardware
 - 1 x laser pointer (or strong light source)
 ```
