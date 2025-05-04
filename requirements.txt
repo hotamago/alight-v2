@@ -9,3 +9,4 @@ pyzbar
 scikit-learn
 pillow
 matplotlib
+PyYAML
