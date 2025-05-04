@@ -45,6 +45,9 @@ delta_point_circle: [25, 25]
 delta_point_chess: [25, 30]
 
 # --- Camera Settings ---
+# Type camera 
+camera1_type: 1 # 0=USB, 1=IP Webcam
+camera2_type: 0 # 0=USB, 1=IP Webcam
 # Camera ID for the first camera (integer >= 0 or string for device path)
 camera1_id: 0
 # Camera ID for the second camera (integer >= 0 or string for device path)
@@ -116,9 +119,9 @@ cam1_saturation: 128.0
 # Saturation value for camera 2
 cam2_saturation: 128.0
 # URL for IP camera 1 (string, if using IP cameras)
-urlcam1: "http://192.168.137.155:8080/shot.jpg"
+urlcam1: "http://192.168.50.80:8080"
 # URL for IP camera 2
-urlcam2: "http://192.168.137.182:8080/shot.jpg"
+urlcam2: "http://192.168.50.80:8080"
 # Target FPS for camera 1 (integer > 0)
 fps_cam1: 15
 # Target FPS for camera 2 (integer > 0)

@@ -54,8 +54,11 @@ calibration = calibrationB.Calibration(cvt_c, cfg['num_image_cal'])
 ### Init camera ###
 camera1 = None
 if cfg['on_cam1']:
-    camera1 = CameraSelf(cfg['camera1_id'], cfg['size_window'],
-                         cfg['cam1_exposure'], cfg['cam1_exposure_auto'], cfg['fps_cam1'])
+    if cfg['camera1_type'] == 0:
+      camera1 = CameraSelf(cfg['camera1_id'], cfg['size_window'],
+                          cfg['cam1_exposure'], cfg['cam1_exposure_auto'], cfg['fps_cam1'])
+    elif cfg['camera1_type'] == 1:
+      camera1 = CameraWebIP(cfg['urlcam1'], cfg['size_window'])
 
 """
 Function main process
@@ -67,20 +70,21 @@ def main_process():
     fullscreensize = tuple(cfg['fullscreensize'])
 
     # --- realtime camera config UI ---
-    cv2.namedWindow("Camera Config", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Camera Config", 600, 150)
-    cv2.imshow("Camera Config", np.zeros((150, 600), dtype=np.uint8))
-    if cfg['on_cam1']:
-        cv2.createTrackbar("Exp1",        "Camera Config", int(
-            (cfg['cam1_exposure'] + 10) * 10), 200, lambda v: None)
-        cv2.createTrackbar("AutoExp1",    "Camera Config", int(
-            cfg['cam1_exposure_auto']), 3, lambda v: None)
-        cv2.createTrackbar("Brightness1", "Camera Config", int(
-            cfg.get('cam1_brightness', 128)), 255, lambda v: None)
-        cv2.createTrackbar("Contrast1",   "Camera Config", int(
-            cfg.get('cam1_contrast', 128)),  255, lambda v: None)
-        cv2.createTrackbar("Saturation1", "Camera Config", int(
-            cfg.get('cam1_saturation', 128)), 255, lambda v: None)
+    if cfg['camera1_type'] == 0:
+      cv2.namedWindow("Camera Config", cv2.WINDOW_NORMAL)
+      cv2.resizeWindow("Camera Config", 600, 150)
+      cv2.imshow("Camera Config", np.zeros((150, 600), dtype=np.uint8))
+      if cfg['on_cam1']:
+          cv2.createTrackbar("Exp1",        "Camera Config", int(
+              (cfg['cam1_exposure'] + 10) * 10), 200, lambda v: None)
+          cv2.createTrackbar("AutoExp1",    "Camera Config", int(
+              cfg['cam1_exposure_auto']), 3, lambda v: None)
+          cv2.createTrackbar("Brightness1", "Camera Config", int(
+              cfg.get('cam1_brightness', 128)), 255, lambda v: None)
+          cv2.createTrackbar("Contrast1",   "Camera Config", int(
+              cfg.get('cam1_contrast', 128)),  255, lambda v: None)
+          cv2.createTrackbar("Saturation1", "Camera Config", int(
+              cfg.get('cam1_saturation', 128)), 255, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
@@ -130,20 +134,23 @@ def main_process():
         # apply realtime camera config settings
         if cfg['on_cam1'] and camera1:
             if mode_running == 0 or not is_detect_corners or not calibration.done:
-              raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
-              e1 = raw_e1 / 10.0 - 10.0
-              ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
-              camera1.setExposure(e1, ae1)
-              # pull brightness/contrast/saturation into cfg, then apply
-              raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
-              cfg['cam1_brightness'] = raw_b1
-              camera1.setBrightness(raw_b1)
-              raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
-              cfg['cam1_contrast'] = raw_c1
-              camera1.setContrast(raw_c1)
-              raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
-              cfg['cam1_saturation'] = raw_s1
-              camera1.setSaturation(raw_s1)
+              if cfg['camera1_type'] == 0:
+                raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
+                e1 = raw_e1 / 10.0 - 10.0
+                ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
+                camera1.setExposure(e1, ae1)
+                # pull brightness/contrast/saturation into cfg, then apply
+                raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
+                cfg['cam1_brightness'] = raw_b1
+                camera1.setBrightness(raw_b1)
+                raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
+                cfg['cam1_contrast'] = raw_c1
+                camera1.setContrast(raw_c1)
+                raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
+                cfg['cam1_saturation'] = raw_s1
+                camera1.setSaturation(raw_s1)
+              elif cfg['camera1_type'] == 1:
+                 camera1.set_auto_mode()
 
         # Keyboard control
         q = cv2.waitKey(1)
@@ -273,12 +280,15 @@ def main_process():
               contoursFigue_cam1 = auto_ProcessImage_nofti(imgCam1_onlyc1, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'], cfg['on_show_cam1'], cfg['on_cam1Hsv'], cfg['on_cam1Ycbcr'], cfg['on_cam1FTI'], "Camera test 1")
 
           elif mode_running == 1: # Mode lazer pen
-            camera1.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-            camera1.setProperty(cv2.CAP_PROP_EXPOSURE, -15)
-            camera1.setProperty(cv2.CAP_PROP_BRIGHTNESS, 0)
-            camera1.setProperty(cv2.CAP_PROP_CONTRAST, 255//2)
-            camera1.setProperty(cv2.CAP_PROP_SATURATION, 255//2)
-            camera1.setProperty(cv2.CAP_PROP_GAIN, 255//2)
+            if cfg['camera1_type'] == 0:
+              camera1.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+              camera1.setProperty(cv2.CAP_PROP_EXPOSURE, -15)
+              camera1.setProperty(cv2.CAP_PROP_BRIGHTNESS, 0)
+              camera1.setProperty(cv2.CAP_PROP_CONTRAST, 255//2)
+              camera1.setProperty(cv2.CAP_PROP_SATURATION, 255//2)
+              camera1.setProperty(cv2.CAP_PROP_GAIN, 255//2)
+            elif cfg['camera1_type'] == 1:
+              camera1.set_manual_mode()
 
             # camera1.setExposure(10, 1)
             imgCam1 = camera1.getFrame()
