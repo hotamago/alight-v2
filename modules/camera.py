@@ -21,7 +21,9 @@ class CameraWebIP:
         self.imgself = None
         self.success = False
         self.stopped = True
-        self.auto_mode = True
+        self.auto_mode = None
+        self.current_iso = 100
+        self.current_exposure_ns = 100000
         self.updateFrame()
 
     def updateFrame(self):
@@ -50,12 +52,35 @@ class CameraWebIP:
     def stop(self):
         self.stopped = True
 
+    def set_iso(self, val):
+        self.current_iso = val
+        try:
+            response = requests.post(f"{self.url}/settings/iso?set={self.current_iso}")
+            if response.status_code == 200:
+                print(f"ISO set to {self.current_iso}.")
+            else:
+                print(f"Failed to set ISO to {self.current_iso}.")
+        except requests.RequestException as e:
+            print(f"Error setting ISO to {self.current_iso}: {e}")
+
+    def set_exposure_ns(self, val):
+        self.current_exposure_ns = val
+        try:
+            response = requests.post(f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}")
+            if response.status_code == 200:
+                print(f"Exposure time set to {self.current_exposure_ns}.")
+            else:
+                print(f"Failed to set exposure time to {self.current_exposure_ns}.")
+        except requests.RequestException as e:
+            print(f"Error setting exposure time to {self.current_exposure_ns}: {e}")
+
     def set_auto_mode(self):
         """
         Set camera to auto mode.
         """
-        if self.auto_mode:
+        if self.auto_mode == True:
             return
+        self.auto_mode = True
         # using requests send GET request to set auto mode
         try:
             response = requests.get(f"{self.url}/settings/manual_sensor?set=off")
@@ -65,21 +90,22 @@ class CameraWebIP:
                 print("Failed to set camera to auto mode.")
         except requests.RequestException as e:
             print(f"Error setting camera to auto mode: {e}")
-    
+
     def set_manual_mode(self):
         """
         Set camera to manual mode.
         """
-        if not self.auto_mode:
+        if self.auto_mode == False:
             return
+        self.auto_mode = False
         # using requests send GET request to set manual mode, send POST ios, exposure_ns
         try:
             response = requests.get(f"{self.url}/settings/manual_sensor?set=on")
             if response.status_code == 200:
                 print("Camera set to manual mode.")
                 # Set ISO and exposure time
-                iso_response = requests.post(f"{self.url}/settings/iso?set=100")
-                exposure_response = requests.post(f"{self.url}/settings/exposure_ns?set=100000")
+                iso_response = requests.post(f"{self.url}/settings/iso?set={self.current_iso}")
+                exposure_response = requests.post(f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}")
                 if iso_response.status_code == 200 and exposure_response.status_code == 200:
                     print("ISO and exposure time set successfully.")
                 else:

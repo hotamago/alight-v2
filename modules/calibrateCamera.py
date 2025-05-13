@@ -42,11 +42,11 @@ class Calibration:
         if self.num_image_cal > 0:
             ret, corners = cv2.findChessboardCorners(
                 gray, self.size_chess,
-                # flags=(
-                #     cv2.CALIB_CB_ADAPTIVE_THRESH |
-                #     cv2.CALIB_CB_FAST_CHECK |
-                #     cv2.CALIB_CB_NORMALIZE_IMAGE
-                #     )
+                flags=(
+                    cv2.CALIB_CB_ADAPTIVE_THRESH |
+                    cv2.CALIB_CB_FAST_CHECK |
+                    cv2.CALIB_CB_NORMALIZE_IMAGE
+                    )
                 )
             if ret:
                 self.num_image_cal -= 1
@@ -86,3 +86,11 @@ class Calibration:
         self.done = False
         self.objpoints.clear()
         self.imgpoints.clear()
+
+    def undistort(self, img: np.ndarray) -> np.ndarray:
+        """
+        Undistort an image using the calibration results.
+        """
+        if not self.done:
+            raise RuntimeError("Calibration not yet completed.")
+        return cv2.undistort(img, self.mtx, self.dist, None, self.newcameramtx)

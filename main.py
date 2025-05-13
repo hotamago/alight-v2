@@ -85,6 +85,15 @@ def main_process():
               cfg.get('cam1_contrast', 128)),  255, lambda v: None)
           cv2.createTrackbar("Saturation1", "Camera Config", int(
               cfg.get('cam1_saturation', 128)), 255, lambda v: None)
+    elif cfg['camera1_type'] == 1:
+        cv2.namedWindow("Camera Config", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Camera Config", 600, 150)
+        # Range iso 100-6400
+        cv2.createTrackbar("ISO", "Camera Config", int(
+            camera1.current_iso), 6400, lambda v: None)
+        # Range exposure 100000-10000000
+        cv2.createTrackbar("Exposure", "Camera Config", int(
+            camera1.current_exposure_ns) // 10000, 10000000 // 10000, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
@@ -149,8 +158,10 @@ def main_process():
                 raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
                 cfg['cam1_saturation'] = raw_s1
                 camera1.setSaturation(raw_s1)
-              elif cfg['camera1_type'] == 1:
-                 camera1.set_auto_mode()
+
+            # Auto mode for camera 1 when need to detect corners or calibrate
+            if cfg['camera1_type'] == 1 and (not is_detect_corners or not calibration.done):
+              camera1.set_auto_mode()
 
         # Keyboard control
         q = cv2.waitKey(1)
@@ -289,6 +300,8 @@ def main_process():
               camera1.setProperty(cv2.CAP_PROP_GAIN, 255//2)
             elif cfg['camera1_type'] == 1:
               camera1.set_manual_mode()
+              camera1.set_iso(cv2.getTrackbarPos("ISO", "Camera Config"))
+              camera1.set_exposure_ns(cv2.getTrackbarPos("Exposure", "Camera Config") * 10000)
 
             # camera1.setExposure(10, 1)
             imgCam1 = camera1.getFrame()
