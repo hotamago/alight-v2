@@ -58,7 +58,7 @@ class PatternMaker:
         offset_y = margin_y + (available_height - board_height) // 2
         
         # Clear the canvas
-        self.g.fill(0)
+        self.g.fill(255)
         
         # Draw the checkerboard
         for i in range(self.rows):
@@ -71,7 +71,7 @@ class PatternMaker:
                 x2 = x1 + square_size
                 y2 = y1 + square_size
                 
-                cv2.rectangle(self.g, (x1, y1), (x2, y2), (255, 255, 255), -1)
+                cv2.rectangle(self.g, (x1, y1), (x2, y2), (0, 0, 0), -1)
         
         # Draw a border around the checkerboard for better visibility
         cv2.rectangle(self.g, 

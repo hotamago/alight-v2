@@ -90,10 +90,10 @@ def main_process():
         cv2.resizeWindow("Camera Config", 600, 150)
         # Range iso 100-6400
         cv2.createTrackbar("ISO", "Camera Config", int(
-            camera1.current_iso), 6400, lambda v: None)
-        # Range exposure 100000-10000000
+            camera1.current_iso - 100), 6400, lambda v: None)
+        # Range exposure 100000-10000000 (convert to // 10000)
         cv2.createTrackbar("Exposure", "Camera Config", int(
-            camera1.current_exposure_ns) // 10000, 10000000 // 10000, lambda v: None)
+            camera1.current_exposure_ns - 100000) // 10000, 10000000 // 10000, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
@@ -300,8 +300,8 @@ def main_process():
               camera1.setProperty(cv2.CAP_PROP_GAIN, 255//2)
             elif cfg['camera1_type'] == 1:
               camera1.set_manual_mode()
-              camera1.set_iso(cv2.getTrackbarPos("ISO", "Camera Config"))
-              camera1.set_exposure_ns(cv2.getTrackbarPos("Exposure", "Camera Config") * 10000)
+              camera1.set_iso(cv2.getTrackbarPos("ISO", "Camera Config") + 100)
+              camera1.set_exposure_ns(cv2.getTrackbarPos("Exposure", "Camera Config") * 10000 + 10000)
 
             # camera1.setExposure(10, 1)
             imgCam1 = camera1.getFrame()

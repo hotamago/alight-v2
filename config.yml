@@ -4,7 +4,7 @@ is_multi_thead: false
 # Number of images to use for camera calibration (integer > 0)
 num_image_cal: 10
 # Size of the chessboard pattern (inner corners count, integer > 0)
-size_chess: 8
+size_chess: 6
 # Size of the corner squares on the chessboard pattern in pixels (list: [width, height])
 corner_chess_size: [50, 50]
 
