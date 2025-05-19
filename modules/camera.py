@@ -11,6 +11,7 @@ import requests
 # ios: PORT http://192.168.50.80:8080/settings/iso?set=100
 # exposure_ns: PORT http://192.168.50.80:8080/settings/exposure_ns?set=100000
 
+
 class CameraWebIP:
     def __init__(self, url, size_out=(600, 400)):
         self.size_out = size_out
@@ -22,8 +23,8 @@ class CameraWebIP:
         self.success = False
         self.stopped = True
         self.auto_mode = None
-        self.current_iso = 100
-        self.current_exposure_ns = 100000
+        self.current_iso = -1
+        self.current_exposure_ns = -1
         self.updateFrame()
 
     def updateFrame(self):
@@ -53,10 +54,12 @@ class CameraWebIP:
         self.stopped = True
 
     def set_iso(self, val):
-        self.current_iso = val
+        if self.current_iso == val:
+            return
         try:
             response = requests.post(f"{self.url}/settings/iso?set={self.current_iso}")
             if response.status_code == 200:
+                self.current_iso = val
                 print(f"ISO set to {self.current_iso}.")
             else:
                 print(f"Failed to set ISO to {self.current_iso}.")
@@ -64,10 +67,12 @@ class CameraWebIP:
             print(f"Error setting ISO to {self.current_iso}: {e}")
 
     def set_exposure_ns(self, val):
-        self.current_exposure_ns = val
+        if self.current_exposure_ns == val:
+            return
         try:
             response = requests.post(f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}")
             if response.status_code == 200:
+                self.current_exposure_ns = val
                 print(f"Exposure time set to {self.current_exposure_ns}.")
             else:
                 print(f"Failed to set exposure time to {self.current_exposure_ns}.")

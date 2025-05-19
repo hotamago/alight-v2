@@ -94,10 +94,10 @@ fillCam2_01:
 is_cam1_flip: false
 # Enable/disable flipping for camera 2 feed (boolean: true/false)
 is_cam2_flip: false
-# Flip mode for camera 1 (integer: 0=vertical, 1=horizontal, -1=both)
-cam1_flip_mode: -1
-# Flip mode for camera 2 (integer: 0=vertical, 1=horizontal, -1=both)
-cam2_flip_mode: -1
+# Flip mode for camera 1 (integer: 1=vertical, 2=horizontal, 0=both)
+cam1_flip_mode: 2
+# Flip mode for camera 2 (integer: 1=vertical, 2=horizontal, 0=both)
+cam2_flip_mode: 2
 # Exposure value for camera 1 (float, range depends on camera, e.g., -13.0 to 0.0)
 cam1_exposure: -7.0
 # Auto exposure mode for camera 1 (integer, depends on camera backend, e.g., 0=manual, 1=auto, 3=aperture_priority)

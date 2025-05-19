@@ -85,6 +85,7 @@ def main_process():
               cfg.get('cam1_contrast', 128)),  255, lambda v: None)
           cv2.createTrackbar("Saturation1", "Camera Config", int(
               cfg.get('cam1_saturation', 128)), 255, lambda v: None)
+          cv2.createTrackbar("Flip", "Camera Config", cfg['cam1_flip_mode'], 2, lambda v: None)
     elif cfg['camera1_type'] == 1:
         cv2.namedWindow("Camera Config", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Camera Config", 600, 150)
@@ -94,6 +95,7 @@ def main_process():
         # Range exposure 100000-10000000 (convert to // 10000)
         cv2.createTrackbar("Exposure", "Camera Config", int(
             camera1.current_exposure_ns - 100000) // 10000, 10000000 // 10000, lambda v: None)
+        cv2.createTrackbar("Flip", "Camera Config", cfg['cam1_flip_mode'], 2, lambda v: None)
 
     if cfg['on_cam1'] and camera1:
         camera1.start_thread()
@@ -128,6 +130,9 @@ def main_process():
     ### Currunt system config ###
     # 0 = hand, 1 = pen
     mode_running = 1
+
+    # Store the last click time for double click detection
+    main_process.last_click_time = 0
 
     FPP = cfg['FramePerProcess']
     curFPP = 0
@@ -178,6 +183,8 @@ def main_process():
         # if q == ord('2'):
         #   mode_running = 1
         #   print("switch to lazer mode")
+
+        # ========= Shortcut =========
         
         if q == ord('s'):
           cfg['on_black_points_touch_screen'] = not cfg['on_black_points_touch_screen']
@@ -245,6 +252,7 @@ def main_process():
           imgCam1 = imageProcesser.undistort(imgCam1, mtx, dist, newcameramtx, roi)
         if is_detect_corners_1 and calibration.done:
           imgCam1_onlyc1 = np.copy(imgCam1)
+          imgCam1_onlyc1 = cv2.flip(imgCam1_onlyc1, cv2.getTrackbarPos("Flip", "Camera Config")-1)
 
         if not is_detect_corners or (not calibration.done):
             if not is_detect_corners_1:
@@ -459,12 +467,17 @@ def main_process():
                 mouse.position = mouseComputer
                 # ~ mouse.move(mouseComputer[0], mouseComputer[1])
               if isClicked and (not old_clicked):
-                # Press and release
-                mouse.click(Button.left)
+                # Check for double click
+                current_time = time.time()
+                if current_time - main_process.last_click_time < cfg.get('double_click_threshold', 0.3):
+                    # Execute double click
+                    mouse.click(Button.left, 2)
+                else:
+                    # Press and release (single click)
+                    mouse.click(Button.left)
+                    
+                main_process.last_click_time = current_time
                 old_clicked = True
-
-                # Double click
-                # mouse.click(Button.left, 2)
 
                 # Scroll two steps down
                 # mouse.scroll(0, 2)
