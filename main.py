@@ -104,7 +104,6 @@ def main_process():
     # Case status
     is_detect_corners = False
     is_detect_corners_1 = False
-    is_detect_corners_2 = False
 
     array_points_paint = []
 
@@ -196,7 +195,6 @@ def main_process():
         if q == ord('r'):
           camera1.setExposure(cfg['cam1_exposure'], cfg['cam1_exposure_auto'])
           is_detect_corners_1 = False
-          is_detect_corners_2 = False
           is_detect_corners = False
           calibration.reset()
           print("Start reset")
@@ -226,6 +224,7 @@ def main_process():
         imgCam1 = None
         if cfg['on_cam1'] and camera1:
           imgCam1 = camera1.getFrame()
+        imgCam1_org = np.copy(imgCam1)
 
         if (cfg['on_cam1'] and imgCam1 is None):
           if not is_detect_corners:
@@ -246,8 +245,6 @@ def main_process():
           imgCam1 = imageProcesser.undistort(imgCam1, mtx, dist, newcameramtx, roi)
         if is_detect_corners_1 and calibration.done:
           imgCam1_onlyc1 = np.copy(imgCam1)
-        if is_detect_corners_2:
-          imgCam1 = matrixBincase.fast_tranform_image_opencv(imgCam1, maCam2YXZ, size_window)
 
         if not is_detect_corners or (not calibration.done):
             if not is_detect_corners_1:
@@ -274,7 +271,7 @@ def main_process():
         else:
           if cfg['on_config']:
             if cfg['on_cam1'] and imgCam1 is not None:
-              imgCam1Draw = np.copy(imgCam1)
+              imgCam1Draw = np.copy(imgCam1_org)
               matrixBincase.draw_line(
                   imgCam1Draw, maCam1YXZ[0], maCam1YXZ[1], maCam1YXZ[2], maCam1YXZ[3], 3)
               cv2.imshow("Camera test 1", imgCam1Draw)
@@ -304,11 +301,10 @@ def main_process():
               camera1.set_exposure_ns(cv2.getTrackbarPos("Exposure", "Camera Config") * 10000 + 10000)
 
             # camera1.setExposure(10, 1)
-            imgCam1 = camera1.getFrame()
             
             contoursFigue_cam1 = []
             if cfg['on_cam1']:
-                imgCamFTI = np.copy(imgCam1)
+                imgCamFTI = np.copy(imgCam1_onlyc1)
                 imgFigue = cv2.inRange(imgCamFTI, (0, 0, 60), (255, 255, 255))
                 if cfg['on_debug']:
                     cv2.imshow("imgCamFTI", imgCamFTI)
