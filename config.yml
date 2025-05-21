@@ -139,7 +139,7 @@ blockSizeDepth: 15
 # Process every Nth frame (integer >= 1)
 FramePerProcess: 1
 # Enable/disable mouse/touch control (boolean: true/false)
-on_controller: false
+on_controller: true
 # Enable/disable the black screen drawing mode (boolean: true/false)
 on_black_points_touch_screen: true
 # Enable/disable painting test points on the black screen (boolean: true/false)
@@ -163,9 +163,11 @@ numEleArgvan: 5
 # Number of previous positions to average for mouse smoothing (integer >= 1)
 numAverageMouseMove: 8
 # Time delay (seconds) before registering a press/hold action (float >= 0.0)
-time_delay_press: 0.1
+time_delay_press: 0.7
 # Time delay (seconds) after press start to register a right-click (if no movement) (float >= 0.0)
 time_delay_right_click: 0.8
+# double_click_threshold
+double_click_threshold: 0.5
 # Maximum movement distance (pixels) allowed during right-click delay (integer >= 0)
 circle_in_right_click: 60
 # Maximum radius for drawing detected finger/touch contours (integer > 0)
