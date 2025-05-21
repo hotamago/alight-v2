@@ -64,6 +64,93 @@ if cfg['on_cam1']:
 Function main process
 """
 
+def distance(a, b):
+    return ((a[0] - b[0])**2 + (a[1] - b[1])**2)**0.5
+
+def process_mouse_click(cfg, mouse, raw_clicked, point, window_size, screen_size, state):
+    """
+    Xử lý click, double-click, drag & right-click dựa trên trạng thái giữ trong `state`.
+
+    Tham số:
+    - cfg: dict cấu hình gồm các khóa:
+        * is_flip_mouse: bool
+        * double_click_threshold: float
+        * time_delay_press: float
+        * time_delay_right_click: float
+        * circle_in_right_click: float
+    - raw_clicked: bool, tín hiệu click hiện tại
+    - point: tuple (x, y) tọa độ trong cửa sổ
+    - window_size: tuple (win_w, win_h)
+    - screen_size: tuple (scr_w, scr_h)
+    - state: dict duy trì trạng thái giữa các lần gọi, khởi tạo:
+        state.update({
+            'last_click_time': 0,
+            'click_start_time': None,
+            'start_pos': None,
+            'max_move_dist': 0,
+            'old_clicked': False,
+            'old_right_clicked': False
+        })
+    """
+    now = time.time()
+    win_w, win_h = window_size
+    scr_w, scr_h = screen_size
+
+    # Convert to screen coords
+    x, y = point
+    if cfg.get('is_flip_mouse', False):
+        mx = int(x * scr_w / win_w)
+        my = int(y * scr_h / win_h)
+    else:
+        mx = scr_w - int(x * scr_w / win_w)
+        my = scr_h - int(y * scr_h / win_h)
+    pos = (mx, my)
+
+    # Track movement during click
+    if raw_clicked:
+        if state['click_start_time'] is None:
+            state['click_start_time'] = now
+            state['start_pos'] = pos
+        dist = distance(pos, state['start_pos'])
+        state['max_move_dist'] = max(state['max_move_dist'], dist)
+
+    # Cập nhật con trỏ
+    if pos[0] >= 0 and pos[1] >= 0:
+        mouse.position = pos
+
+    # Xử lý sự kiện click
+    if raw_clicked and not state['old_clicked']:
+        # double click
+        if now - state['last_click_time'] < cfg.get('double_click_threshold', 0.3):
+            mouse.click(Button.left, 2)
+        else:
+            mouse.click(Button.left)
+        state['last_click_time'] = now
+        state['old_clicked'] = True
+
+    # Giữ kéo (drag)
+    elif raw_clicked and (now - (state['click_start_time'] or now) > cfg['time_delay_press']):
+        mouse.press(Button.left)
+        state['old_clicked'] = True
+
+    # Thả chuột và right-click nếu phù hợp
+    elif not raw_clicked and state['click_start_time'] is not None:
+        hold_time = now - state['click_start_time']
+        if hold_time > cfg['time_delay_press']:
+            mouse.release(Button.left)
+        if (not state['old_right_clicked']
+                and hold_time > cfg['time_delay_right_click']
+                and state['max_move_dist'] <= cfg['circle_in_right_click']):
+            mouse.click(Button.right)
+            state['old_right_clicked'] = True
+        # Reset state
+        state.update({
+            'click_start_time': None,
+            'start_pos': None,
+            'max_move_dist': 0,
+            'old_clicked': False,
+            'old_right_clicked': False
+        })
 
 def main_process():
     size_window = tuple(cfg['size_window'])
@@ -131,6 +218,9 @@ def main_process():
     # 0 = hand, 1 = pen
     mode_running = 1
 
+    # State
+    state = {}
+
     # Store the last click time for double click detection
     main_process.last_click_time = 0
 
@@ -146,22 +236,21 @@ def main_process():
 
         # apply realtime camera config settings
         if cfg['on_cam1'] and camera1:
-            if mode_running == 0 or not is_detect_corners or not calibration.done:
-              if cfg['camera1_type'] == 0:
-                raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
-                e1 = raw_e1 / 10.0 - 10.0
-                ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
-                camera1.setExposure(e1, ae1)
-                # pull brightness/contrast/saturation into cfg, then apply
-                raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
-                cfg['cam1_brightness'] = raw_b1
-                camera1.setBrightness(raw_b1)
-                raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
-                cfg['cam1_contrast'] = raw_c1
-                camera1.setContrast(raw_c1)
-                raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
-                cfg['cam1_saturation'] = raw_s1
-                camera1.setSaturation(raw_s1)
+            if cfg['camera1_type'] == 0 and (not is_detect_corners or not calibration.done):
+              raw_e1 = cv2.getTrackbarPos("Exp1",        "Camera Config")
+              e1 = raw_e1 / 10.0 - 10.0
+              ae1 = cv2.getTrackbarPos("AutoExp1",    "Camera Config")
+              camera1.setExposure(e1, ae1)
+              # pull brightness/contrast/saturation into cfg, then apply
+              raw_b1 = cv2.getTrackbarPos("Brightness1", "Camera Config")
+              cfg['cam1_brightness'] = raw_b1
+              camera1.setBrightness(raw_b1)
+              raw_c1 = cv2.getTrackbarPos("Contrast1", "Camera Config")
+              cfg['cam1_contrast'] = raw_c1
+              camera1.setContrast(raw_c1)
+              raw_s1 = cv2.getTrackbarPos("Saturation1", "Camera Config")
+              cfg['cam1_saturation'] = raw_s1
+              camera1.setSaturation(raw_s1)
 
             # Auto mode for camera 1 when need to detect corners or calibrate
             if cfg['camera1_type'] == 1 and (not is_detect_corners or not calibration.done):
@@ -177,12 +266,6 @@ def main_process():
             if cfg['on_cam1'] and camera1:
                 camera1.stop()
             break
-        # if q == ord('1'):
-        #   mode_running = 0
-        #   print("switch to hand mode")
-        # if q == ord('2'):
-        #   mode_running = 1
-        #   print("switch to lazer mode")
 
         # ========= Shortcut =========
         
@@ -287,15 +370,7 @@ def main_process():
                   "Camera test 1", onMouse, param=(imgCam1, cfg['gamma1']))
 
           # Preprocess image
-          if mode_running == 0: # Mode figue
-            """
-            Camera 1: camera
-            """
-            contoursFigue_cam1 = []
-            if cfg['on_cam1']:
-              contoursFigue_cam1 = auto_ProcessImage_nofti(imgCam1_onlyc1, cfg['gamma1'], cfg['fillCam1_01'], cfg['noseCam1'], cfg['on_show_cam1'], cfg['on_cam1Hsv'], cfg['on_cam1Ycbcr'], cfg['on_cam1FTI'], "Camera test 1")
-
-          elif mode_running == 1: # Mode lazer pen
+          if mode_running == 1: # Mode lazer pen
             if cfg['camera1_type'] == 0:
               camera1.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
               camera1.setProperty(cv2.CAP_PROP_EXPOSURE, -15)
@@ -331,60 +406,7 @@ def main_process():
           ratioClicked = 1
           vectorClickLen = 0
           if len(contoursFigue_cam1) > 0:
-
-            if mode_running == 0:
-              """
-              Caculate point click
-              """
-              list_highest_point_hull = []
-              for hulls in contoursFigue_cam1:
-                highest_point_hull = max(hulls, key=lambda x: x[0][1])
-                list_highest_point_hull.append(highest_point_hull[0])
-              list_highest_point_hull.sort(key=lambda x: -x[1])
-              cnt_5_bestest_hull_point = cfg['n_points_touch']
-              for point in list_highest_point_hull:
-                list_5_bestest_hull_point.append(point + cfg['delta_Point'])
-                cnt_5_bestest_hull_point -= 1
-                if cnt_5_bestest_hull_point <= 0:
-                    break
-              for i in range(0, len(list_5_bestest_hull_point)):
-                list_5_bestest_hull_point[i] = matrixBincase.tramform_points(
-                  list_5_bestest_hull_point[i], maCam2YXZ, size_window)
-
-              """
-              Caculate info of convexHull
-              """
-              if len(contoursFigue_cam1) > 0:
-                  np_contours = np.vstack(
-                      contoursFigue_cam1).reshape((-1, 1, 2))
-                  chull = cv2.convexHull(np_contours)
-
-                  imgDrawC = np.zeros(
-                      (size_window[1], size_window[0], 3))
-                  imgDrawC = cv2.drawContours(
-                      imgDrawC, chull, -1, (0, 255, 0), 3)
-
-                  areaValueOr = cv2.contourArea(chull)
-
-                  Moo = cv2.moments(chull)
-                  cx = int(Moo['m10']/Moo['m00'])
-                  cy = int(Moo['m01']/Moo['m00'])
-                  vectorClickLen = distanceB2Points(
-                      list_5_bestest_hull_point[0], [cx, cy])
-
-                  (x, y), radius = cv2.minEnclosingCircle(chull)
-                  center = (int(x), int(y))
-                  radius = int(radius)
-                  areaValueCr = radius*radius*np.pi
-
-                  ratioClicked = (areaValueOr + 0.001) / \
-                      (areaValueCr + 0.001)
-
-                  cv2.circle(imgDrawC, center, radius,
-                              cfg['color_clicked'], 1, cv2.LINE_AA)
-                  cv2.imshow("imgDrawC", imgDrawC)
-
-            elif mode_running == 1:
+           if mode_running == 1:
                 cnt_5_bestest_hull_point = cfg['n_points_touch']
                 for hulls in contoursFigue_cam1:
                     point = np.median(hulls, axis=0)[0]
@@ -399,13 +421,7 @@ def main_process():
           """
           isClicked = False
           isClickedPoints = [False] * len(list_5_bestest_hull_point)
-          if mode_running == 0:
-              # ~ print(ratioClicked, " : ", areaValueOr , "/", areaValueCr)
-              # ~ if vectorClickLen >= 50.0:
-              if ratioClicked <= 0.45:
-                  isClicked = True
-                  isClickedPoints = [True] * len(list_5_bestest_hull_point)
-          elif mode_running == 1:
+          if mode_running == 1:
               if len(list_5_bestest_hull_point) > 0:
                   isClicked = True
                   isClickedPoints = [True] * len(list_5_bestest_hull_point)
@@ -443,80 +459,8 @@ def main_process():
           if cfg['on_cam1'] and cfg['on_controller']:
             if len(list_5_bestest_hull_point) > 0:
               # Convert img pos to window pos
-              width, height = pyautogui.size()
               pointMouseNow = list_5_bestest_hull_point[0]
-              if cfg['is_flip_mouse']:
-                mouseComputer = (int(
-                    pointMouseNow[0]*width/size_window[0]), int(pointMouseNow[1]*height/size_window[1]))
-              else:
-                mouseComputer = (int(width - pointMouseNow[0]*width/size_window[0]), int(
-                  height - pointMouseNow[1]*height/size_window[1]))
-
-              # Time
-              if isClicked:
-                if not is_mouse_time_start:
-                  mouse_time_start = time.time()
-                  is_mouse_time_start = True
-                  first_mouse_pos = mouseComputer
-                  last_mouse_pos = mouseComputer
-                if distanceB2Points(mouseComputer, first_mouse_pos) > distanceB2Points(last_mouse_pos, first_mouse_pos):
-                  last_mouse_pos = mouseComputer
-
-              if mouseComputer >= (0, 0):
-                mousePos.addPrev(mouseComputer)
-                mouse.position = mouseComputer
-                # ~ mouse.move(mouseComputer[0], mouseComputer[1])
-              if isClicked and (not old_clicked):
-                # Check for double click
-                current_time = time.time()
-                if current_time - main_process.last_click_time < cfg.get('double_click_threshold', 0.3):
-                    # Execute double click
-                    mouse.click(Button.left, 2)
-                else:
-                    # Press and release (single click)
-                    mouse.click(Button.left)
-                    
-                main_process.last_click_time = current_time
-                old_clicked = True
-
-                # Scroll two steps down
-                # mouse.scroll(0, 2)
-              elif isClicked and ((time.time() - mouse_time_start) > cfg['time_delay_press']):
-                mouse.press(Button.left)
-                old_clicked = True
-              elif not isClicked:
-                if is_mouse_time_start:
-                  if ((time.time() - mouse_time_start) > cfg['time_delay_press']):
-                    mouse.release(Button.left)
-
-                  if (not old_right_clicked):
-                    # ~ print((time.time() - mouse_time_start), distanceB2Points(last_mouse_pos, first_mouse_pos))
-                    if ((time.time() - mouse_time_start) > cfg['time_delay_right_click']) and (distanceB2Points(last_mouse_pos, first_mouse_pos) <= cfg['circle_in_right_click']):
-                        mouse.click(Button.right)
-                        old_right_clicked = True
-
-                    # mouse.position = (0, 0)
-
-                old_clicked = False
-                old_right_clicked = False
-                is_mouse_time_start = False
-
-              else:
-                if is_mouse_time_start:
-                  if ((time.time() - mouse_time_start) > cfg['time_delay_press']):
-                    mouse.release(Button.left)
-
-                  if (not old_right_clicked):
-                    # ~ print((time.time() - mouse_time_start), distanceB2Points(last_mouse_pos, first_mouse_pos))
-                    if ((time.time() - mouse_time_start) > cfg['time_delay_right_click']) and (distanceB2Points(last_mouse_pos, first_mouse_pos) <= cfg['circle_in_right_click']):
-                      mouse.click(Button.right)
-                      old_right_clicked = True
-
-                  # mouse.position = (0, 0)
-
-                old_clicked = False
-                old_right_clicked = False
-                is_mouse_time_start = False
+              process_mouse_click(cfg, mouse, isClicked, pointMouseNow, size_window, pyautogui.size(), state)
 
 
 """
