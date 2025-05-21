@@ -144,11 +144,10 @@ def process_mouse_click(cfg, mouse, raw_clicked, point, window_size, screen_size
     if raw_clicked and state['old_clicked'] and not state['is_pressed']:
         hold_time = now - state['click_start_time']
         print(f"[DEBUG] Hold time for press: {hold_time}")
-        if hold_time > cfg['time_delay_press']:
+        if hold_time > cfg['time_delay_press'] and state['max_move_dist'] > cfg['circle_in_right_click']:
             mouse.press(Button.left)
             state['is_pressed'] = True
             print("[DEBUG] Press left for drag")
-        return
 
     # 3) Release or right-click
     if not raw_clicked and state['click_start_time'] is not None:
@@ -157,8 +156,7 @@ def process_mouse_click(cfg, mouse, raw_clicked, point, window_size, screen_size
         if state['is_pressed']:
             mouse.release(Button.left)
             print("[DEBUG] Release left")
-        elif (hold_time > cfg['time_delay_right_click']
-              and state['max_move_dist'] <= cfg['circle_in_right_click']):
+        elif (hold_time > cfg['time_delay_right_click'] and state['max_move_dist'] <= cfg['circle_in_right_click']):
             mouse.click(Button.right)
             state['old_right_clicked'] = True
             print("[DEBUG] Click right")
