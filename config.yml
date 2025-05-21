@@ -163,7 +163,7 @@ numEleArgvan: 5
 # Number of previous positions to average for mouse smoothing (integer >= 1)
 numAverageMouseMove: 8
 # Time delay (seconds) before registering a press/hold action (float >= 0.0)
-time_delay_press: 0.7
+time_delay_press: 0.1
 # Time delay (seconds) after press start to register a right-click (if no movement) (float >= 0.0)
 time_delay_right_click: 0.8
 # double_click_threshold
