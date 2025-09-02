@@ -139,7 +139,7 @@ blockSizeDepth: 15
 # Process every Nth frame (integer >= 1)
 FramePerProcess: 1
 # Enable/disable mouse/touch control (boolean: true/false)
-on_controller: false
+on_controller: true
 # Enable/disable the black screen drawing mode (boolean: true/false)
 on_black_points_touch_screen: true
 # Enable/disable painting test points on the black screen (boolean: true/false)
