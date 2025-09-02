@@ -28,6 +28,8 @@ import modules.screenshot as screenshotB
 
 from sklearn.neighbors import KDTree
 
+cv2.setUseOptimized(True)
+
 """
 Bincase library
 """
@@ -68,6 +70,18 @@ if cfg["on_cam1"]:
         )
     elif cfg["camera1_type"] == 1:
         camera1 = CameraWebIP(cfg["urlcam1"], cfg["size_window"])
+
+mousePos = smoothB.average_vecN_smooth(cfg["numAverageMouseMove"])
+cursor_filter_x = smoothB.OneEuroFilter(
+    freq=60.0,
+    min_cutoff=cfg.get("euro_min_cutoff", 1.2),
+    beta=cfg.get("euro_beta", 0.01),
+)
+cursor_filter_y = smoothB.OneEuroFilter(
+    freq=60.0,
+    min_cutoff=cfg.get("euro_min_cutoff", 1.2),
+    beta=cfg.get("euro_beta", 0.01),
+)
 
 """
 Function main process
@@ -142,7 +156,11 @@ def process_mouse_click(
 
     # Move mouse
     if pos[0] >= 0 and pos[1] >= 0:
-        mouse.position = pos
+        now = time.time()
+        # dt gần đúng theo FPS
+        smx = int(cursor_filter_x.filter(pos[0]))
+        smy = int(cursor_filter_y.filter(pos[1]))
+        mouse.position = (smx, smy)
 
     # 1) Click or double-click
     if raw_clicked and not state["old_clicked"]:
@@ -188,6 +206,30 @@ def process_mouse_click(
         reset_state(state)
         # print("[DEBUG] State reset")
         return
+
+
+def detect_laser_points(bgr_img, hsv_v_min=245, min_area=3, max_area=200):
+    """
+    Trả về list keypoints của blob siêu sáng (laser chấm).
+    Ý tưởng: V kênh HSV rất cao -> nhị phân -> SimpleBlobDetector lọc blob nhỏ.
+    """
+    if bgr_img is None:
+        return []
+    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+    _, mask_v = cv2.threshold(v, hsv_v_min, 255, cv2.THRESH_BINARY)
+
+    params = cv2.SimpleBlobDetector_Params()
+    params.filterByColor = True
+    params.blobColor = 255
+    params.filterByArea = True
+    params.minArea = float(min_area)
+    params.maxArea = float(max_area)
+    params.filterByCircularity = False
+    params.filterByInertia = False
+    params.filterByConvexity = False
+    detector = cv2.SimpleBlobDetector_create(params)
+    return detector.detect(mask_v)
 
 
 def main_process():
@@ -484,14 +526,14 @@ def main_process():
 
                 # camera1.setExposure(10, 1)
 
-                contoursFigue_cam1 = []
-                if cfg["on_cam1"]:
-                    imgCamFTI = np.copy(imgCam1_onlyc1)
-                    imgFigue = cv2.inRange(imgCamFTI, (0, 0, 60), (255, 255, 255))
-                    if cfg["on_debug"]:
-                        cv2.imshow("imgCamFTI", imgCamFTI)
-                    contoursFigue_cam1, hierarchyFigue = cv2.findContours(
-                        imgFigue, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE
+                # Detect laser points
+                keypoints = []
+                if cfg["on_cam1"] and imgCam1_onlyc1 is not None:
+                    keypoints = detect_laser_points(
+                        imgCam1_onlyc1,
+                        hsv_v_min=cfg.get("laser_v_min", 245),
+                        min_area=cfg.get("laser_min_area", 3),
+                        max_area=cfg.get("laser_max_area", 200),
                     )
 
             # Process image
@@ -500,24 +542,13 @@ def main_process():
 
             # Process, Caculate point
             list_5_bestest_hull_point = []
-            areaValueOr = 0
-            areaValueCr = 0
-            ratioClicked = 1
-            vectorClickLen = 0
-            if len(contoursFigue_cam1) > 0:
-                if mode_running == 1:
-                    cnt_5_bestest_hull_point = cfg["n_points_touch"]
-                    for hulls in contoursFigue_cam1:
-                        point = np.median(hulls, axis=0)[0]
-                        list_5_bestest_hull_point.append(
-                            (
-                                int(point[0] + cfg["delta_Point"][0]),
-                                int(point[1] + cfg["delta_Point"][1]),
-                            )
-                        )
-                        cnt_5_bestest_hull_point -= 1
-                        if cnt_5_bestest_hull_point <= 0:
-                            break
+            if mode_running == 1 and keypoints:
+                for kp in keypoints[: cfg["n_points_touch"]]:
+                    x, y = (
+                        int(kp.pt[0] + cfg["delta_Point"][0]),
+                        int(kp.pt[1] + cfg["delta_Point"][1]),
+                    )
+                    list_5_bestest_hull_point.append((x, y))
 
             # Check clicked points touch
             isClicked = False

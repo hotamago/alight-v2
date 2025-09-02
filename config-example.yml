@@ -47,85 +47,46 @@ delta_point_chess: [25, 30]
 # --- Camera Settings ---
 # Type camera 
 camera1_type: 1 # 0=USB, 1=IP Webcam
-camera2_type: 0 # 0=USB, 1=IP Webcam
 # Camera ID for the first camera (integer >= 0 or string for device path)
 camera1_id: 0
-# Camera ID for the second camera (integer >= 0 or string for device path)
-camera2_id: 1
 # Enable/disable processing for camera 1 (boolean: true/false)
 on_cam1: true
-# Enable/disable processing for camera 2 (boolean: true/false)
-on_cam2: true
 # Enable/disable HSV color space processing for camera 1 (boolean: true/false)
 on_cam1Hsv: true
-# Enable/disable HSV color space processing for camera 2 (boolean: true/false)
-on_cam2Hsv: true
 # Enable/disable YCbCr color space processing for camera 1 (boolean: true/false)
 on_cam1Ycbcr: false
-# Enable/disable YCbCr color space processing for camera 2 (boolean: true/false)
-on_cam2Ycbcr: false
 # Enable/disable FTI (Fast Thresholding Inversion?) processing for camera 1 (boolean: true/false)
 on_cam1FTI: false
-# Enable/disable FTI processing for camera 2 (boolean: true/false)
-on_cam2FTI: false
 # Enable/disable camera configuration window (boolean: true/false)
 on_config: true
 # Enable/disable display window for camera 1 feed (boolean: true/false)
 on_show_cam1: true
-# Enable/disable display window for camera 2 feed (boolean: true/false)
-on_show_cam2: true
 # Gamma correction value for camera 1 (float > 0.0)
 gamma1: 0.5
 # Gamma correction value for camera 2 (float > 0.0)
-gamma2: 0.6
-# Kernel size for noise reduction (e.g., median blur) for camera 1 (list: [kernel_width, kernel_height], odd integers)
 noseCam1: [3, 3]
 # Kernel size for noise reduction for camera 2 (list: [kernel_width, kernel_height], odd integers)
-noseCam2: [3, 3]
-# Color range filters for camera 1 (list of lists: [[lower_bound], [upper_bound]]) - format depends on color space (HSV, YCbCr)
 fillCam1_01:
   - [[0, 90, 10], [35, 190, 150]] # Example HSV range
   - [[0, 0, 0], [255, 180, 135]] # Example YCbCr range
-# Color range filters for camera 2
-fillCam2_01:
-  - [[0, 90, 10], [35, 190, 150]]
-  - [[0, 0, 0], [255, 180, 135]]
 # Enable/disable flipping for camera 1 feed (boolean: true/false)
 is_cam1_flip: false
-# Enable/disable flipping for camera 2 feed (boolean: true/false)
-is_cam2_flip: false
 # Flip mode for camera 1 (integer: 1=vertical, 2=horizontal, 0=both)
 cam1_flip_mode: 2
-# Flip mode for camera 2 (integer: 1=vertical, 2=horizontal, 0=both)
-cam2_flip_mode: 2
 # Exposure value for camera 1 (float, range depends on camera, e.g., -13.0 to 0.0)
 cam1_exposure: -7.0
 # Auto exposure mode for camera 1 (integer, depends on camera backend, e.g., 0=manual, 1=auto, 3=aperture_priority)
 cam1_exposure_auto: 3
-# Exposure value for camera 2
-cam2_exposure: -8.5
-# Auto exposure mode for camera 2
-cam2_exposure_auto: 3
 # Brightness value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
 cam1_brightness: 136.0
-# Brightness value for camera 2
-cam2_brightness: 0.0
 # Contrast value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
 cam1_contrast: 180.0
-# Contrast value for camera 2
-cam2_contrast: 155.0
 # Saturation value for camera 1 (float/integer, range depends on camera, e.g., 0-255)
 cam1_saturation: 128.0
-# Saturation value for camera 2
-cam2_saturation: 128.0
 # URL for IP camera 1 (string, if using IP cameras)
 urlcam1: "http://192.168.50.80:8080"
-# URL for IP camera 2
-urlcam2: "http://192.168.50.80:8080"
 # Target FPS for camera 1 (integer > 0)
-fps_cam1: 15
-# Target FPS for camera 2 (integer > 0)
-fps_cam2: 15
+fps_cam1: 30
 
 # --- Stereo Vision Settings (StereoBM) ---
 # Minimum disparity value (integer, must be > 0 and divisible by 16)
@@ -185,3 +146,12 @@ show_FPS_console: false
 size_window: [1280, 720]
 # Fullscreen/projector resolution (list: [width, height])
 fullscreensize: [1920, 1080]
+
+# 1€ filter
+euro_min_cutoff: 1.2
+euro_beta: 0.01
+
+# Laser detection
+laser_v_min: 245       # ngưỡng V (HSV) để coi là "siêu sáng"
+laser_min_area: 3
+laser_max_area: 200

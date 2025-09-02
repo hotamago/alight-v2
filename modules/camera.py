@@ -30,7 +30,8 @@ class CameraWebIP:
     def updateFrame(self):
         try:
             resp = urllib.request.urlopen(
-                f"{self.url}/shot.jpg", context=self.ctx, timeout=5)
+                f"{self.url}/shot.jpg", context=self.ctx, timeout=5
+            )
             arr = np.frombuffer(resp.read(), np.uint8)
             img = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
             self.imgself = cv2.resize(img, self.size_out)
@@ -57,27 +58,27 @@ class CameraWebIP:
         if self.current_iso == val:
             return
         try:
-            response = requests.post(f"{self.url}/settings/iso?set={self.current_iso}")
+            response = requests.post(f"{self.url}/settings/iso?set={val}")
             if response.status_code == 200:
                 self.current_iso = val
                 print(f"ISO set to {self.current_iso}.")
             else:
-                print(f"Failed to set ISO to {self.current_iso}.")
+                print(f"Failed to set ISO to {val}.")
         except requests.RequestException as e:
-            print(f"Error setting ISO to {self.current_iso}: {e}")
+            print(f"Error setting ISO to {val}: {e}")
 
     def set_exposure_ns(self, val):
         if self.current_exposure_ns == val:
             return
         try:
-            response = requests.post(f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}")
+            response = requests.post(f"{self.url}/settings/exposure_ns?set={val}")
             if response.status_code == 200:
                 self.current_exposure_ns = val
                 print(f"Exposure time set to {self.current_exposure_ns}.")
             else:
-                print(f"Failed to set exposure time to {self.current_exposure_ns}.")
+                print(f"Failed to set exposure time to {val}.")
         except requests.RequestException as e:
-            print(f"Error setting exposure time to {self.current_exposure_ns}: {e}")
+            print(f"Error setting exposure time to {val}: {e}")
 
     def set_auto_mode(self):
         """
@@ -109,9 +110,16 @@ class CameraWebIP:
             if response.status_code == 200:
                 print("Camera set to manual mode.")
                 # Set ISO and exposure time
-                iso_response = requests.post(f"{self.url}/settings/iso?set={self.current_iso}")
-                exposure_response = requests.post(f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}")
-                if iso_response.status_code == 200 and exposure_response.status_code == 200:
+                iso_response = requests.post(
+                    f"{self.url}/settings/iso?set={self.current_iso}"
+                )
+                exposure_response = requests.post(
+                    f"{self.url}/settings/exposure_ns?set={self.current_exposure_ns}"
+                )
+                if (
+                    iso_response.status_code == 200
+                    and exposure_response.status_code == 200
+                ):
                     print("ISO and exposure time set successfully.")
                 else:
                     print("Failed to set ISO or exposure time.")
@@ -120,14 +128,22 @@ class CameraWebIP:
         except requests.RequestException as e:
             print(f"Error setting camera to manual mode: {e}")
 
+
 class CameraSelf:
-    def __init__(self, id_cam, size_out=(600, 400), exposure_value=80, exposure_auto_value=0, fps_value=30):
+    def __init__(
+        self,
+        id_cam,
+        size_out=(600, 400),
+        exposure_value=80,
+        exposure_auto_value=0,
+        fps_value=30,
+    ):
         self.size_out = size_out
         self.cap = cv2.VideoCapture(id_cam)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, size_out[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size_out[1])
         self.cap.set(cv2.CAP_PROP_FPS, fps_value)
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self.cap.set(cv2.CAP_DSHOW, 1)
         self.imgself = None
         self.success = False
@@ -153,7 +169,7 @@ class CameraSelf:
             if value is not None:
                 res = self.cap.set(prop, value)
                 if not res:
-                    raise ValueError(f"Failed to set property {cap_prop} to {value}.")
+                    raise ValueError(f"Failed to set property {prop} to {value}.")
 
     def setProperty(self, cap_prop, value):
         # Check if proerty change is needed
@@ -174,8 +190,8 @@ class CameraSelf:
     def setExposure(self, exposure_value, exposure_auto_value=0):
         """
         Set exposure mode and value.
-        Note: Many backends (e.g. v4l2 on Linux) expect specific AUTO_EXPOSURE flags 
-        (1=auto, 3=manual) or floating ranges (0.25/0.75 in OpenCV), so raw CAP_PROP_EXPOSURE 
+        Note: Many backends (e.g. v4l2 on Linux) expect specific AUTO_EXPOSURE flags
+        (1=auto, 3=manual) or floating ranges (0.25/0.75 in OpenCV), so raw CAP_PROP_EXPOSURE
         may be ignored unless correct backend flags are used.
         """
         self.setProperty(cv2.CAP_PROP_AUTO_EXPOSURE, exposure_auto_value)

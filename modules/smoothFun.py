@@ -67,11 +67,44 @@ class vectorN_smooth:
 
         velocity = [0] * self._dim
         for i in range(self._dim):
-            velocity[i] = (value[i] - self._old_value[i]) / \
-                (length+1) * self._speed
+            velocity[i] = (value[i] - self._old_value[i]) / (length + 1) * self._speed
 
         self._old_value = value
 
         for i in range(self._dim):
             value[i] += i
         return value
+
+
+# --- One Euro Filter (1€) cho làm mượt tọa độ chuột ---
+class OneEuroFilter:
+    def __init__(self, freq=60.0, min_cutoff=1.0, beta=0.0, d_cutoff=1.0):
+        self.freq = float(freq)
+        self.min_cutoff = float(min_cutoff)
+        self.beta = float(beta)
+        self.d_cutoff = float(d_cutoff)
+        self.x_prev = None
+        self.dx_prev = None
+
+    def _alpha(self, cutoff):
+        # alpha = 1 / (1 + tau / te), tau = 1/(2π*cutoff), te = 1/freq
+        tau = 1.0 / (2.0 * math.pi * cutoff)
+        te = 1.0 / self.freq
+        return 1.0 / (1.0 + tau / te)
+
+    def filter(self, x, dt=None):
+        if dt is not None and dt > 0:
+            self.freq = 1.0 / dt
+        if self.x_prev is None:
+            self.x_prev, self.dx_prev = x, 0.0
+            return x
+        # ước lượng đạo hàm
+        dx = (x - self.x_prev) * self.freq
+        a_d = self._alpha(self.d_cutoff)
+        dx_hat = a_d * dx + (1 - a_d) * self.dx_prev
+        # cutoff phụ thuộc tốc độ
+        cutoff = self.min_cutoff + self.beta * abs(dx_hat)
+        a = self._alpha(cutoff)
+        x_hat = a * x + (1 - a) * self.x_prev
+        self.x_prev, self.dx_prev = x_hat, dx_hat
+        return x_hat
